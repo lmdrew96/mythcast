@@ -230,18 +230,21 @@ export default function WorldPage() {
                       Lineage Viewer
                     </h2>
                     {mythIds.length > 1 && (
-                      <select
-                        value={selectedMythId ?? undefined}
-                        onChange={(e) => setSelectedMythId(e.target.value as Id<"myths">)}
-                        className="w-fit rounded-md border bg-transparent px-2 py-1 font-mono text-xs"
-                        style={{ borderColor: "var(--mc-secondary)" }}
-                      >
-                        {mythIds.map((id, i) => (
-                          <option key={id} value={id}>
-                            Founding myth {i + 1}
-                          </option>
-                        ))}
-                      </select>
+                      <label className="flex w-fit flex-col gap-1 text-xs">
+                        <span className="font-mono tracking-wide uppercase opacity-60">Founding myth</span>
+                        <select
+                          value={selectedMythId ?? undefined}
+                          onChange={(e) => setSelectedMythId(e.target.value as Id<"myths">)}
+                          className="rounded-md border bg-transparent px-2 py-1 font-mono text-xs"
+                          style={{ borderColor: "var(--mc-secondary)" }}
+                        >
+                          {mythIds.map((id, i) => (
+                            <option key={id} value={id}>
+                              Founding myth {i + 1}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     )}
                     <LineageViewer entries={lineage} />
                   </section>

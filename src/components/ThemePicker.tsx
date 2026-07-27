@@ -24,16 +24,28 @@ export function ThemePicker({ suggested, children }: { suggested: ThemeName; chi
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Theme">
         {Array.from(new Map(THEME_VARIANTS.map((v) => [v.name, v.label])).entries()).map(([themeName, label]) => (
-          <button key={themeName} type="button" onClick={() => setName(themeName)} className={`${pillBase} ${name === themeName ? pillActive : pillInactive}`}>
+          <button
+            key={themeName}
+            type="button"
+            aria-pressed={name === themeName}
+            onClick={() => setName(themeName)}
+            className={`${pillBase} ${name === themeName ? pillActive : pillInactive}`}
+          >
             {label}
             {themeName === suggested ? " · suggested" : ""}
           </button>
         ))}
-        <div className="ml-1 flex gap-1 border-l border-foreground/20 pl-3">
+        <div className="ml-1 flex gap-1 border-l border-foreground/20 pl-3" role="group" aria-label="Light or dark mode">
           {(["light", "dark"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => setVariant(v)} className={`${pillBase} ${variant === v ? pillActive : pillInactive}`}>
+            <button
+              key={v}
+              type="button"
+              aria-pressed={variant === v}
+              onClick={() => setVariant(v)}
+              className={`${pillBase} ${variant === v ? pillActive : pillInactive}`}
+            >
               {v}
             </button>
           ))}
