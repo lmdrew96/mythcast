@@ -15,10 +15,12 @@ import { EventQueue } from "@/components/EventQueue";
 import { MythCard } from "@/components/MythCard";
 import { LocationList } from "@/components/LocationList";
 import { NpcRoster } from "@/components/NpcRoster";
+import { FactionList } from "@/components/FactionList";
 import { Button } from "@/components/ui/Button";
 import { mythToProse } from "@/lib/codex/prose";
 import type { CultureProfile, CultureSeedParams, Myth } from "@/lib/types";
 import type { Location } from "@/lib/culture/locations";
+import type { Faction } from "@/lib/culture/factions";
 import type { GraphEdge, GraphNode } from "@/lib/graph/layout";
 
 const DEFAULT_SEED_PARAMS: CultureSeedParams = {
@@ -39,6 +41,7 @@ export default function WorldPage() {
   const createPantheon = useMutation(api.gods.createPantheon);
   const createMyths = useMutation(api.myths.createMyths);
   const createLocations = useMutation(api.locations.createLocations);
+  const createFactions = useMutation(api.factions.createFactions);
   const syncGodRelationships = useAction(api.graph.sync.syncGodRelationships);
   const syncDerivationTrace = useAction(api.graph.sync.syncDerivationTrace);
   const startRun = useMutation(api.simulation.startRun);
@@ -67,6 +70,7 @@ export default function WorldPage() {
   const mythDocs = useQuery(api.myths.listByCulture, cultureId ? { cultureId } : "skip");
   const locationDocs = useQuery(api.locations.listByCulture, cultureId ? { cultureId } : "skip");
   const npcDocs = useQuery(api.npcs.listByCulture, cultureId ? { cultureId } : "skip");
+  const factionDocs = useQuery(api.factions.listByCulture, cultureId ? { cultureId } : "skip");
   const worldCultures = useQuery(api.worlds.listCultures, cultureDoc?.worldId ? { worldId: cultureDoc.worldId } : "skip");
 
   /** Creates a culture (and its pantheon/myths/run), optionally inside an existing world — the shared core of both "Generate world" (no worldId) and "Add another culture to this world" (worldId from the currently loaded culture). */
@@ -85,6 +89,8 @@ export default function WorldPage() {
       const newMythIds = await createMyths({ cultureId: newCultureId, rngSeed: runSeed });
       setProgressStep("Placing named locations…");
       await createLocations({ cultureId: newCultureId, rngSeed: runSeed });
+      setProgressStep("Forming factions…");
+      await createFactions({ cultureId: newCultureId, rngSeed: runSeed });
       setProgressStep("Syncing relationship graph…");
       await syncGodRelationships({ cultureId: newCultureId, rngSeed: runSeed });
       await syncDerivationTrace({ cultureId: newCultureId });
@@ -335,6 +341,15 @@ export default function WorldPage() {
                     NPC Roster
                   </h2>
                   <NpcRoster npcs={npcDocs} />
+                </section>
+              )}
+
+              {factionDocs && factionDocs.length > 0 && (
+                <section className="flex flex-col gap-3">
+                  <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
+                    Factions
+                  </h2>
+                  <FactionList factions={factionDocs.map((doc) => doc.data as Faction)} />
                 </section>
               )}
 

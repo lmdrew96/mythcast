@@ -64,6 +64,16 @@ export default defineSchema({
     hook: v.string(),
   }).index("by_culture", ["cultureId"]),
 
+  // Named organizations synthesized from myth hookContext data (taboo
+  // enforcement, tension pursuit, rival-god followings) — 2026-07-27
+  // DM-worldbuilding gap report, high-value add #6: DMs think in
+  // organizations, not just individual gods.
+  factions: defineTable({
+    cultureId: v.id("cultures"),
+    name: v.string(),
+    data: v.any(), // Faction
+  }).index("by_culture", ["cultureId"]),
+
   mythVariants: defineTable({
     // A variant's parent is either the original founding myth (generation 1)
     // or an earlier variant (generation 2+, drift chains beyond one hop) —
