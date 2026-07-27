@@ -13,9 +13,11 @@ import { LineageViewer, type LineageEntry } from "@/components/LineageViewer";
 import { SeedForm } from "@/components/SeedForm";
 import { EventQueue } from "@/components/EventQueue";
 import { MythCard } from "@/components/MythCard";
+import { LocationList } from "@/components/LocationList";
 import { Button } from "@/components/ui/Button";
 import { mythToProse } from "@/lib/codex/prose";
 import type { CultureProfile, CultureSeedParams, Myth } from "@/lib/types";
+import type { Location } from "@/lib/culture/locations";
 import type { GraphEdge, GraphNode } from "@/lib/graph/layout";
 
 const DEFAULT_SEED_PARAMS: CultureSeedParams = {
@@ -35,6 +37,7 @@ export default function WorldPage() {
   const createCulture = useMutation(api.cultures.create);
   const createPantheon = useMutation(api.gods.createPantheon);
   const createMyths = useMutation(api.myths.createMyths);
+  const createLocations = useMutation(api.locations.createLocations);
   const syncGodRelationships = useAction(api.graph.sync.syncGodRelationships);
   const syncDerivationTrace = useAction(api.graph.sync.syncDerivationTrace);
   const startRun = useMutation(api.simulation.startRun);
@@ -61,6 +64,7 @@ export default function WorldPage() {
 
   const cultureDoc = useQuery(api.cultures.get, cultureId ? { cultureId } : "skip");
   const mythDocs = useQuery(api.myths.listByCulture, cultureId ? { cultureId } : "skip");
+  const locationDocs = useQuery(api.locations.listByCulture, cultureId ? { cultureId } : "skip");
   const worldCultures = useQuery(api.worlds.listCultures, cultureDoc?.worldId ? { worldId: cultureDoc.worldId } : "skip");
 
   /** Creates a culture (and its pantheon/myths/run), optionally inside an existing world — the shared core of both "Generate world" (no worldId) and "Add another culture to this world" (worldId from the currently loaded culture). */
@@ -77,6 +81,8 @@ export default function WorldPage() {
       await createPantheon({ cultureId: newCultureId, rngSeed: runSeed });
       setProgressStep("Writing founding myths…");
       const newMythIds = await createMyths({ cultureId: newCultureId, rngSeed: runSeed });
+      setProgressStep("Placing named locations…");
+      await createLocations({ cultureId: newCultureId, rngSeed: runSeed });
       setProgressStep("Syncing relationship graph…");
       await syncGodRelationships({ cultureId: newCultureId, rngSeed: runSeed });
       await syncDerivationTrace({ cultureId: newCultureId });
@@ -309,6 +315,15 @@ export default function WorldPage() {
                       return <MythCard key={doc._id} title={prose.title} generation={prose.generation} paragraph={prose.paragraph} hook={prose.hook} />;
                     })}
                   </div>
+                </section>
+              )}
+
+              {locationDocs && locationDocs.length > 0 && (
+                <section className="flex flex-col gap-3">
+                  <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
+                    Named Locations
+                  </h2>
+                  <LocationList locations={locationDocs.map((doc) => doc.data as Location)} />
                 </section>
               )}
 

@@ -42,6 +42,16 @@ export default defineSchema({
     data: v.any(), // Myth
   }).index("by_culture", ["cultureId"]),
 
+  // Named, traceable places synthesized from culture + founding-myth data
+  // (spec-adjacent DM-worldbuilding add: a settlementPattern category alone
+  // gives a DM nothing to put a pin on).
+  locations: defineTable({
+    cultureId: v.id("cultures"),
+    name: v.string(),
+    kind: v.union(v.literal("capital"), v.literal("sacred-site"), v.literal("taboo-site")),
+    data: v.any(), // Location
+  }).index("by_culture", ["cultureId"]),
+
   mythVariants: defineTable({
     // A variant's parent is either the original founding myth (generation 1)
     // or an earlier variant (generation 2+, drift chains beyond one hop) —
