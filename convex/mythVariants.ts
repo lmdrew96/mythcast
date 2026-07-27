@@ -8,7 +8,7 @@ import type { God, Myth, MythVariant } from "../src/lib/types";
 import type { Id } from "./_generated/dataModel";
 
 /** A variant's parent is either an original founding myth (has `.title`) or an earlier variant (drift chains beyond one hop) — mutateMyth only reads `.id`/`.events` off its `parent` argument, so this builds a minimal Myth-shaped view that works for either case. Shared by insertVariant and the Simulation Loop (Phase 8), which advances every myth lineage in a culture one generation at a time. */
-export function parentDocToMyth(parentData: Myth | MythVariant, parentDocId: string, cultureId: string, generation: number): Myth {
+export function parentDocToMyth(parentData: Myth | MythVariant, parentDocId: string, cultureId: string, generation: number): Omit<Myth, "hookContext"> {
   return {
     id: "title" in parentData ? parentData.id : parentDocId,
     title: "title" in parentData ? parentData.title : "(variant)",

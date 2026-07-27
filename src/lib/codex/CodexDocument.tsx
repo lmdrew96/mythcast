@@ -12,7 +12,7 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ThemeColors } from "../theming/palettes";
 
 export type CodexGod = { name: string; prose: string };
-export type CodexMyth = { title: string; generation: number; paragraph: string };
+export type CodexMyth = { title: string; generation: number; paragraph: string; hook?: string };
 
 export type CodexData = {
   cultureName: string;
@@ -72,6 +72,19 @@ function buildStyles(mode: CodexMode, colors: ThemeColors) {
     paragraph: {
       fontSize: 11,
     },
+    hook: {
+      fontSize: 10,
+      fontStyle: "italic",
+      marginTop: 6,
+      paddingLeft: 8,
+      borderLeftWidth: 2,
+      borderLeftStyle: "solid",
+      borderLeftColor: styled ? hex(colors.secondaryAccent) : "#000000",
+    },
+    hookLabel: {
+      fontStyle: "normal",
+      fontWeight: "bold",
+    },
   });
 }
 
@@ -97,6 +110,12 @@ export function CodexDocument({ data, mode, colors }: { data: CodexData; mode: C
           <View key={index} style={styles.entry}>
             <Text style={styles.entryTitle}>{myth.title}{myth.generation > 0 ? ` — generation ${myth.generation}` : ""}</Text>
             <Text style={styles.paragraph}>{myth.paragraph}</Text>
+            {myth.hook && (
+              <Text style={styles.hook}>
+                <Text style={styles.hookLabel}>Adventure hook — </Text>
+                {myth.hook}
+              </Text>
+            )}
           </View>
         ))}
       </Page>

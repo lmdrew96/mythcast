@@ -165,7 +165,10 @@ const EVENT_OPERATION_WEIGHTS: Record<DriftEventType, Record<EventBiasedOperatio
 /** Spec: "a small amount of drift even with no events injected... a minor secondary effect, not the primary engine." Independent of any event. */
 const DECAY_CHANCE = 0.12;
 
-export function mutationRngSeed(myth: Myth, generation: number, salt = 0): number {
+/** mutateMyth/mutationRngSeed only ever read a parent's `id`/`events` — this lets convex/mythVariants.ts's parentDocToMyth build a minimal Myth-shaped view (a MythVariant parent has no `hookContext` of its own) without satisfying the full Myth type. */
+type MythLike = Pick<Myth, "id" | "events">;
+
+export function mutationRngSeed(myth: MythLike, generation: number, salt = 0): number {
   return hashString(myth.id + ":mutate:" + generation + ":" + salt) >>> 0;
 }
 
@@ -185,7 +188,7 @@ export function diffMythEvents(before: MythEvent[], after: MythEvent[]): MythEve
  * mutation per generation reads as real drift; several at once would read
  * as noise) plus, independently, a small chance of decay.
  */
-export function mutateMyth(parent: Myth, pantheon: God[], generation: number, event: DriftEvent | null, rngSeed?: number): MythVariant {
+export function mutateMyth(parent: MythLike, pantheon: God[], generation: number, event: DriftEvent | null, rngSeed?: number): MythVariant {
   const resolvedSeed = rngSeed ?? mutationRngSeed(parent, generation);
   const rng = new Rng(resolvedSeed);
 

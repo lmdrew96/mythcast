@@ -106,12 +106,26 @@ export type MythEvent = {
   derivedFrom: string[];
 };
 
+/**
+ * The specific entities an adventure-hook generator needs per myth
+ * archetype, captured at generation time from values the generator already
+ * computed (a god's name, the taboo it guards, the mortal who broke it,
+ * etc.) rather than re-derived later by parsing prose/titles.
+ */
+export type MythHookContext =
+  | { kind: "origin"; godName: string }
+  | { kind: "cautionary"; godName: string; taboo: string; offender: string }
+  | { kind: "mismatch"; godName: string; witness: string }
+  | { kind: "relationship"; relationshipType: "parent-of" | "rival-of" | "consort-of" | "usurped-by"; fromName: string; toName: string }
+  | { kind: "tension"; godName: string; seeker: string };
+
 export type Myth = {
   id: string;
   title: string;
   events: MythEvent[];
   cultureId: string;
   generation: number; // 0 = founding myth
+  hookContext: MythHookContext;
 };
 
 /** War/famine/migration/contact/disaster — injected events that bias myth mutation (spec Section 5/7). Phase 7 (Mutation/Drift Engine) consumes these; Phase 8 (Simulation Loop) is what actually injects them manually or rolls them procedurally. */

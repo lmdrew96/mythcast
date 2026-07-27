@@ -7,15 +7,23 @@
 // needed, keeping this proportional to what the data already provides.
 
 import type { CultureProfile, God, Myth, MythVariant } from "../types";
+import { generateAdventureHook } from "../myth/hooks";
 
 export type ProseMyth = {
   title: string;
   generation: number;
   paragraph: string;
+  /** Only founding myths (generation 0) carry a hookContext to derive this from — later drift variants have no adventure hook of their own. */
+  hook?: string;
 };
 
 export function mythToProse(myth: Myth): ProseMyth {
-  return { title: myth.title, generation: myth.generation, paragraph: myth.events.map((e) => e.description).join(" ") };
+  return {
+    title: myth.title,
+    generation: myth.generation,
+    paragraph: myth.events.map((e) => e.description).join(" "),
+    hook: generateAdventureHook(myth),
+  };
 }
 
 /** A variant has no `.title` of its own (spec: it's a retelling of its parent) — the caller supplies the founding myth's title so the codex still reads as "the same myth, later telling." */

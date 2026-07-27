@@ -180,6 +180,7 @@ describe("validateMyths — fabricated contradictions", () => {
         { type: "human-response", description: "x", involvedGodIds: ["god-1"], derivedFrom: ["culture.ritualPractices"] },
         { type: "moral-outcome", description: "x", involvedGodIds: ["god-1"], derivedFrom: ["culture.coreValues"] },
       ],
+      hookContext: { kind: "origin", godName: "Testarion" },
       ...overrides,
     };
   }

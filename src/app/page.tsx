@@ -50,7 +50,7 @@ export default function Home() {
             <div className="flex flex-col gap-4">
               {myths.map((myth) => {
                 const prose = mythToProse(myth);
-                return <MythCard key={myth.id} title={prose.title} generation={prose.generation} paragraph={prose.paragraph} />;
+                return <MythCard key={myth.id} title={prose.title} generation={prose.generation} paragraph={prose.paragraph} hook={prose.hook} />;
               })}
             </div>
           </section>

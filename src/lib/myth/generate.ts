@@ -141,6 +141,7 @@ function generateOriginMyth(culture: CultureProfile, pantheon: God[], rng: Rng, 
     events,
     cultureId: culture.id,
     generation: 0,
+    hookContext: { kind: "origin", godName: god.name },
   };
 }
 
@@ -202,6 +203,7 @@ function generateCautionaryTale(culture: CultureProfile, pantheon: God[], taboo:
     events,
     cultureId: culture.id,
     generation: 0,
+    hookContext: { kind: "cautionary", godName: god.name, taboo, offender },
   };
 }
 
@@ -259,6 +261,7 @@ function generateMismatchMyth(culture: CultureProfile, god: God, rng: Rng, index
     events,
     cultureId: culture.id,
     generation: 0,
+    hookContext: { kind: "mismatch", godName: god.name, witness },
   };
 }
 
@@ -464,6 +467,7 @@ function generateRelationshipMyth(culture: CultureProfile, pantheon: God[], rela
     events,
     cultureId: culture.id,
     generation: 0,
+    hookContext: { kind: "relationship", relationshipType: relationship.type, fromName: from.name, toName: to.name },
   };
 }
 
@@ -535,6 +539,7 @@ function generateTensionMyth(culture: CultureProfile, pantheon: God[], tension: 
     events,
     cultureId: culture.id,
     generation: 0,
+    hookContext: { kind: "tension", godName: god.name, seeker },
   };
 }
 

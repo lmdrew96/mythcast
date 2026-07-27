@@ -12,8 +12,10 @@ import { RelationshipGraph } from "@/components/RelationshipGraph";
 import { LineageViewer, type LineageEntry } from "@/components/LineageViewer";
 import { SeedForm } from "@/components/SeedForm";
 import { EventQueue } from "@/components/EventQueue";
+import { MythCard } from "@/components/MythCard";
 import { Button } from "@/components/ui/Button";
-import type { CultureProfile, CultureSeedParams } from "@/lib/types";
+import { mythToProse } from "@/lib/codex/prose";
+import type { CultureProfile, CultureSeedParams, Myth } from "@/lib/types";
 import type { GraphEdge, GraphNode } from "@/lib/graph/layout";
 
 const DEFAULT_SEED_PARAMS: CultureSeedParams = {
@@ -55,6 +57,7 @@ export default function WorldPage() {
   const [relationshipGraph, setRelationshipGraph] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
 
   const cultureDoc = useQuery(api.cultures.get, cultureId ? { cultureId } : "skip");
+  const mythDocs = useQuery(api.myths.listByCulture, cultureId ? { cultureId } : "skip");
 
   async function createWorld() {
     setGenerating(true);
@@ -215,6 +218,20 @@ export default function WorldPage() {
                   ← Start a new world
                 </Button>
               </div>
+
+              {mythDocs && mythDocs.length > 0 && (
+                <section className="flex flex-col gap-3">
+                  <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
+                    Founding Myths
+                  </h2>
+                  <div className="flex flex-col gap-4">
+                    {mythDocs.map((doc) => {
+                      const prose = mythToProse(doc.data as Myth);
+                      return <MythCard key={doc._id} title={prose.title} generation={prose.generation} paragraph={prose.paragraph} hook={prose.hook} />;
+                    })}
+                  </div>
+                </section>
+              )}
 
               {!simulationDone && runId && (
                 <section className="flex flex-col gap-3">
