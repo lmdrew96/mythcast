@@ -20,10 +20,33 @@ export function pantheonRngSeed(culture: CultureProfile, salt = 0): number {
   return hashString(culture.id + ":pantheon:" + salt) >>> 0;
 }
 
-/** No fixed god count — scales with how much texture the Culture Profile actually has (spec Section 4; exact formula is an open question per Section 10, this is a reasonable starting heuristic). */
+/**
+ * No fixed god count — scales with how much texture the Culture Profile
+ * actually has (spec Section 4; exact formula was an open question per
+ * Section 10 #1, resolved here at Polish/Tuning).
+ *
+ * Culture Generator (Phase 2) always picks exactly 5 core values and 4
+ * taboos — those two counts never vary per culture, so a formula built
+ * only from them (plus flaggedTensions, which per tensions.ts can only
+ * ever be 0 or 1, since every tension rule keys off a single threatModel
+ * value) collapses almost all richness variation away. Empirically, the
+ * original richness/2 formula produced ONLY sizes 5-6 across 500 random
+ * cultures (see Tangle note on this tuning pass). "Distinct fears/threats"
+ * — the scaling driver spec Section 4 actually names — is approximated
+ * here as duress signals that DO vary per seed: an active external threat,
+ * real material scarcity, and/or a cosmology complex enough to need more
+ * distinct god-concepts to reconcile. Weighted so every size in [3, 8] is
+ * reachable by some real seed combination, not just the middle of the range.
+ */
 export function pantheonSize(culture: CultureProfile): number {
-  const richness = culture.coreValues.value.length + culture.taboos.value.length + culture.flaggedTensions.length + 1;
-  return Math.max(3, Math.min(8, Math.round(richness / 2)));
+  const duressSignals = [
+    culture.seed.threatModel !== "isolated",
+    culture.seed.resourceScarcity === "scarce" || culture.seed.resourceScarcity === "famine-prone",
+    culture.seed.cosmologyStance === "dualist" || culture.seed.cosmologyStance === "polytheist-ancestral",
+  ].filter(Boolean).length;
+
+  const richness = culture.coreValues.value.length + culture.taboos.value.length + culture.flaggedTensions.length * 3 + duressSignals * 4;
+  return Math.max(3, Math.min(8, Math.round(richness / 3)));
 }
 
 export function dedupTraits(traits: string[]): string[] {

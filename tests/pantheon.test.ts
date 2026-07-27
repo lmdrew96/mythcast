@@ -25,6 +25,31 @@ describe("generatePantheon", () => {
     expect(pantheon.length).toBe(size);
   });
 
+  it("produces meaningfully different sizes across low-duress vs high-duress cultures", () => {
+    // Regression guard for the Polish/Tuning fix: the original richness/2
+    // formula produced ONLY sizes 5-6 across 500 random cultures, because
+    // coreValues/taboos counts are fixed by the Culture Generator and
+    // flaggedTensions can only ever be 0 or 1 (every tension rule keys off
+    // a single threatModel value). Size must now actually respond to the
+    // seed's duress signals (threat model, scarcity, cosmology).
+    const lowDuress: CultureSeedParams = {
+      ...seed,
+      threatModel: "isolated",
+      resourceScarcity: "abundant",
+      cosmologyStance: "animist",
+    };
+    const highDuress: CultureSeedParams = {
+      ...seed,
+      threatModel: "rival-clans",
+      resourceScarcity: "famine-prone",
+      cosmologyStance: "dualist",
+    };
+
+    const lowSize = pantheonSize(generateCulture(lowDuress, 1));
+    const highSize = pantheonSize(generateCulture(highDuress, 1));
+    expect(highSize).toBeGreaterThan(lowSize);
+  });
+
   it("is deterministic for the same culture and rng seed", () => {
     const culture = generateCulture(seed, 1);
     const a = generatePantheon(culture, 5);
