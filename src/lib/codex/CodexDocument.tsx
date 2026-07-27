@@ -37,7 +37,8 @@ function buildStyles(mode: CodexMode, colors: ThemeColors) {
     },
     title: {
       fontSize: 26,
-      marginBottom: 4,
+      lineHeight: 1.3,
+      marginBottom: 18,
       fontWeight: "bold",
       color: styled ? hex(colors.primaryAccent) : "#000000",
     },
