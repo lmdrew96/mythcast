@@ -26,7 +26,7 @@ export function pantheonSize(culture: CultureProfile): number {
   return Math.max(3, Math.min(8, Math.round(richness / 2)));
 }
 
-function dedupTraits(traits: string[]): string[] {
+export function dedupTraits(traits: string[]): string[] {
   return Array.from(new Set(traits)).slice(0, 4);
 }
 

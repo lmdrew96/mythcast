@@ -426,10 +426,18 @@ export const SACRED_TO_DEPICT_CANDIDATES: Candidate<string>[] = [
 
 export const ECONOMIC_STRUCTURE_CANDIDATES: Candidate<"gift-economy" | "barter" | "tribute" | "trade-based">[] = [
   {
+    // Weight is 0 (not just low) under famine-prone scarcity: a gift economy
+    // redistributes surplus, and famine means there is no surplus — this
+    // isn't a low-probability outcome to allow for texture, it's a
+    // structural impossibility (caught by the validator's
+    // GIFT_ECONOMY_UNDER_FAMINE_RULE during testing; excluding it here is
+    // better than merely detecting it after the fact).
     value: "gift-economy",
     relevantKeys: keys("resourceScarcity", "kinshipStructure", "technologyLevel"),
     weight: (s) =>
-      1 + (s.resourceScarcity === "abundant" ? 3 : 0) + (s.kinshipStructure === "non-kin-collective" ? 2 : 0) + (["stone", "bronze"].includes(s.technologyLevel) ? 1 : 0),
+      s.resourceScarcity === "famine-prone"
+        ? 0
+        : 1 + (s.resourceScarcity === "abundant" ? 3 : 0) + (s.kinshipStructure === "non-kin-collective" ? 2 : 0) + (["stone", "bronze"].includes(s.technologyLevel) ? 1 : 0),
   },
   {
     value: "barter",
@@ -437,9 +445,15 @@ export const ECONOMIC_STRUCTURE_CANDIDATES: Candidate<"gift-economy" | "barter" 
     weight: (s) => 1 + (["nomadic", "semi-nomadic"].includes(s.settlementPattern) ? 3 : 0) + (s.resourceScarcity === "moderate" ? 1 : 0),
   },
   {
+    // Weight is 0 under stateless-egalitarian government for the same reason
+    // as above: tribute requires an authority positioned to collect it, and
+    // stateless-egalitarian is defined as having no formal ruler — a
+    // structural incompatibility, not texture (validator's
+    // TRIBUTE_WITHOUT_AUTHORITY_RULE).
     value: "tribute",
     relevantKeys: keys("governmentType", "settlementPattern"),
-    weight: (s) => 1 + (["hereditary-monarchy", "theocracy"].includes(s.governmentType) ? 3 : 0) + (["fixed-agrarian", "urban"].includes(s.settlementPattern) ? 1 : 0),
+    weight: (s) =>
+      s.governmentType === "stateless-egalitarian" ? 0 : 1 + (["hereditary-monarchy", "theocracy"].includes(s.governmentType) ? 3 : 0) + (["fixed-agrarian", "urban"].includes(s.settlementPattern) ? 1 : 0),
   },
   {
     value: "trade-based",
