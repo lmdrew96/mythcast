@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runStubPipeline } from "@/lib/pipeline";
+import { runPipeline } from "@/lib/pipeline";
 import type { CultureSeedParams } from "@/lib/types";
 
 const seed: CultureSeedParams = {
@@ -13,9 +13,9 @@ const seed: CultureSeedParams = {
   governmentType: "hereditary-monarchy",
 };
 
-describe("stub pipeline", () => {
+describe("pipeline", () => {
   it("runs seed -> culture -> pantheon -> myth end to end", () => {
-    const { culture, pantheon, myth } = runStubPipeline(seed);
+    const { culture, pantheon, myth } = runPipeline(seed);
 
     expect(culture.seed).toEqual(seed);
     expect(pantheon.length).toBeGreaterThan(0);

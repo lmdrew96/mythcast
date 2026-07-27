@@ -1,4 +1,4 @@
-import { runStubPipeline } from "@/lib/pipeline";
+import { runPipeline } from "@/lib/pipeline";
 import type { CultureSeedParams } from "@/lib/types";
 
 const demoSeed: CultureSeedParams = {
@@ -13,11 +13,11 @@ const demoSeed: CultureSeedParams = {
 };
 
 export default function Home() {
-  const { culture, pantheon, myth } = runStubPipeline(demoSeed);
+  const { culture, pantheon, myth } = runPipeline(demoSeed);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-8 font-mono text-sm">
-      <h1 className="text-xl font-bold">Mythcast — Phase 0 stub pipeline</h1>
+      <h1 className="text-xl font-bold">Mythcast — Culture Generator (pantheon/myth still stubs)</h1>
       <section>
         <h2 className="font-semibold">Culture</h2>
         <pre className="overflow-x-auto rounded bg-black/5 p-3">
