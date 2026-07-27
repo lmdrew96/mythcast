@@ -13,11 +13,11 @@ const demoSeed: CultureSeedParams = {
 };
 
 export default function Home() {
-  const { culture, pantheon, myth } = runPipeline(demoSeed);
+  const { culture, pantheon, myths } = runPipeline(demoSeed);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-8 font-mono text-sm">
-      <h1 className="text-xl font-bold">Mythcast — Culture + Pantheon Generators (myth still stub)</h1>
+      <h1 className="text-xl font-bold">Mythcast — Culture, Pantheon &amp; Myth Generators (no drift yet)</h1>
       <section>
         <h2 className="font-semibold">Culture</h2>
         <pre className="overflow-x-auto rounded bg-black/5 p-3">
@@ -31,9 +31,9 @@ export default function Home() {
         </pre>
       </section>
       <section>
-        <h2 className="font-semibold">Myth</h2>
+        <h2 className="font-semibold">Myths</h2>
         <pre className="overflow-x-auto rounded bg-black/5 p-3">
-          {JSON.stringify(myth, null, 2)}
+          {JSON.stringify(myths, null, 2)}
         </pre>
       </section>
     </main>

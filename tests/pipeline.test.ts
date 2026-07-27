@@ -14,13 +14,16 @@ const seed: CultureSeedParams = {
 };
 
 describe("pipeline", () => {
-  it("runs seed -> culture -> pantheon -> myth end to end", () => {
-    const { culture, pantheon, myth } = runPipeline(seed);
+  it("runs seed -> culture -> pantheon -> myths end to end", () => {
+    const { culture, pantheon, myths } = runPipeline(seed);
 
     expect(culture.seed).toEqual(seed);
     expect(pantheon.length).toBeGreaterThan(0);
     expect(pantheon[0].cultureId).toBe(culture.id);
-    expect(myth.cultureId).toBe(culture.id);
-    expect(myth.events.length).toBeGreaterThan(0);
+    expect(myths.length).toBeGreaterThan(0);
+    for (const myth of myths) {
+      expect(myth.cultureId).toBe(culture.id);
+      expect(myth.events.length).toBeGreaterThan(0);
+    }
   });
 });
