@@ -50,6 +50,7 @@ export default function WorldPage() {
   const getRelationshipGraph = useAction(api.lineage.getRelationshipGraph);
   const loadForResume = useAction(api.cultures.loadForResume);
   const createWorldEntity = useMutation(api.worlds.create);
+  const deleteDownstreamOfCulture = useMutation(api.regenerate.deleteDownstreamOfCulture);
   const myCultures = useQuery(api.cultures.listByOwner);
 
   const [seedParams, setSeedParams] = useState<CultureSeedParams>(DEFAULT_SEED_PARAMS);
@@ -73,6 +74,24 @@ export default function WorldPage() {
   const factionDocs = useQuery(api.factions.listByCulture, cultureId ? { cultureId } : "skip");
   const worldCultures = useQuery(api.worlds.listCultures, cultureDoc?.worldId ? { worldId: cultureDoc.worldId } : "skip");
 
+  /** Generates a pantheon + founding myths + locations + factions + relationship/derivation sync + a fresh simulation run for an already-created culture. Shared by "Generate world" (fresh culture) and "Reroll pantheon" (same culture, everything below it rerolled). */
+  async function generateDownstreamOfCulture(targetCultureId: Id<"cultures">, runSeed: number) {
+    setProgressStep("Generating pantheon…");
+    await createPantheon({ cultureId: targetCultureId, rngSeed: runSeed });
+    setProgressStep("Writing founding myths…");
+    const newMythIds = await createMyths({ cultureId: targetCultureId, rngSeed: runSeed });
+    setProgressStep("Placing named locations…");
+    await createLocations({ cultureId: targetCultureId, rngSeed: runSeed });
+    setProgressStep("Forming factions…");
+    await createFactions({ cultureId: targetCultureId, rngSeed: runSeed });
+    setProgressStep("Syncing relationship graph…");
+    await syncGodRelationships({ cultureId: targetCultureId, rngSeed: runSeed });
+    await syncDerivationTrace({ cultureId: targetCultureId });
+    setProgressStep("Preparing simulation…");
+    const newRunId = await startRun({ cultureId: targetCultureId, totalGenerations: SIMULATION_GENERATIONS, seed: runSeed });
+    return { mythIds: newMythIds, runId: newRunId };
+  }
+
   /** Creates a culture (and its pantheon/myths/run), optionally inside an existing world — the shared core of both "Generate world" (no worldId) and "Add another culture to this world" (worldId from the currently loaded culture). */
   async function generateCulture(worldId?: Id<"worlds">) {
     setGenerating(true);
@@ -83,19 +102,7 @@ export default function WorldPage() {
       const runSeed = Math.floor(Math.random() * 2 ** 31);
       setProgressStep("Building culture…");
       const newCultureId = await createCulture({ seed: seedParams, rngSeed: runSeed, worldId });
-      setProgressStep("Generating pantheon…");
-      await createPantheon({ cultureId: newCultureId, rngSeed: runSeed });
-      setProgressStep("Writing founding myths…");
-      const newMythIds = await createMyths({ cultureId: newCultureId, rngSeed: runSeed });
-      setProgressStep("Placing named locations…");
-      await createLocations({ cultureId: newCultureId, rngSeed: runSeed });
-      setProgressStep("Forming factions…");
-      await createFactions({ cultureId: newCultureId, rngSeed: runSeed });
-      setProgressStep("Syncing relationship graph…");
-      await syncGodRelationships({ cultureId: newCultureId, rngSeed: runSeed });
-      await syncDerivationTrace({ cultureId: newCultureId });
-      setProgressStep("Preparing simulation…");
-      const newRunId = await startRun({ cultureId: newCultureId, totalGenerations: SIMULATION_GENERATIONS, seed: runSeed });
+      const { mythIds: newMythIds, runId: newRunId } = await generateDownstreamOfCulture(newCultureId, runSeed);
 
       setCultureId(newCultureId);
       setMythIds(newMythIds);
@@ -105,6 +112,32 @@ export default function WorldPage() {
       setAddingToWorld(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate world");
+    } finally {
+      setGenerating(false);
+      setProgressStep(null);
+    }
+  }
+
+  /** Partial regeneration: keeps the current culture (seed params + every trait rolled from them) fixed and rerolls everything below it — pantheon, myths, locations, factions, and the simulation run. Only offered before a run has produced any drift, since rerolling mid-run would orphan already-simulated variants. */
+  async function rerollPantheon() {
+    if (!cultureId) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      setProgressStep("Clearing old pantheon…");
+      await deleteDownstreamOfCulture({ cultureId });
+      const runSeed = Math.floor(Math.random() * 2 ** 31);
+      const { mythIds: newMythIds, runId: newRunId } = await generateDownstreamOfCulture(cultureId, runSeed);
+
+      setMythIds(newMythIds);
+      setSelectedMythId(newMythIds[0] ?? null);
+      setRunId(newRunId);
+      setSimulationDone(false);
+      setLineage([]);
+      const graph = await getRelationshipGraph({ cultureId });
+      setRelationshipGraph(graph);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reroll pantheon");
     } finally {
       setGenerating(false);
       setProgressStep(null);
@@ -270,9 +303,16 @@ export default function WorldPage() {
                       : `Culture created · ${mythIds.length} founding myth${mythIds.length === 1 ? "" : "s"} · ready to simulate`}
                   </p>
                 </div>
-                <Button variant="ghost" onClick={returnToWorldPicker} disabled={generating}>
-                  ← Start a new world
-                </Button>
+                <div className="flex items-center gap-2">
+                  {!simulationDone && (
+                    <Button variant="ghost" onClick={rerollPantheon} disabled={generating}>
+                      {generating ? (progressStep ?? "Rerolling…") : "Reroll pantheon (keep culture)"}
+                    </Button>
+                  )}
+                  <Button variant="ghost" onClick={returnToWorldPicker} disabled={generating}>
+                    ← Start a new world
+                  </Button>
+                </div>
               </div>
 
               {cultureDoc.worldId && (
