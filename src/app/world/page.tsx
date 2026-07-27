@@ -6,10 +6,12 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { suggestTheme } from "@/lib/theming/autoSuggest";
 import { ThemePicker } from "@/components/ThemePicker";
+import { CultureMasthead } from "@/components/CultureMasthead";
 import { CodexExport } from "@/components/CodexExport";
 import { RelationshipGraph } from "@/components/RelationshipGraph";
 import { LineageViewer, type LineageEntry } from "@/components/LineageViewer";
-import type { CultureSeedParams } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import type { CultureProfile, CultureSeedParams } from "@/lib/types";
 import type { GraphEdge, GraphNode } from "@/lib/graph/layout";
 
 const DEMO_SEED: CultureSeedParams = {
@@ -87,58 +89,56 @@ export default function WorldPage() {
   const suggested = suggestTheme(DEMO_SEED);
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-6 p-8 text-sm">
-      <h1 className="text-xl font-bold">Mythcast — World Output</h1>
-      <p className="text-xs opacity-70">Codex export, myth lineage, and pantheon relationships for a persisted, simulated culture.</p>
+    <main className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
+      <div>
+        <h1 className="font-display text-2xl">Mythcast — World Output</h1>
+        <p className="mt-1 font-mono text-xs tracking-wide uppercase opacity-60">Codex export · myth lineage · pantheon relationships</p>
+      </div>
 
       {!cultureId && (
-        <button
-          type="button"
-          onClick={generateWorld}
-          disabled={generating}
-          className="w-fit rounded border border-black/20 px-4 py-2 text-sm font-medium disabled:opacity-50 dark:border-white/20"
-        >
-          {generating ? "Generating world…" : "Generate demo world"}
-        </button>
+        <div className="mc-card flex flex-col items-start gap-3 p-6">
+          <p className="text-sm opacity-80">Generate a culture, simulate {SIMULATION_GENERATIONS} generations of drift, and see it here — codex, lineage, and pantheon.</p>
+          <Button onClick={generateWorld} disabled={generating}>
+            {generating ? "Generating world…" : "Generate demo world"}
+          </Button>
+        </div>
       )}
       {error && <p className="text-xs text-red-600">{error}</p>}
 
       {cultureId && cultureDoc && (
         <ThemePicker suggested={suggested}>
           {(themeName, themeVariant) => (
-            <div className="flex flex-col gap-6">
-              <section>
-                <h2 className="font-semibold" style={{ color: "var(--mc-primary)" }}>
-                  {cultureDoc.name}
-                </h2>
-                <p className="mt-1 text-xs opacity-70">
-                  Simulated {SIMULATION_GENERATIONS} generations · {mythIds.length} founding myth{mythIds.length === 1 ? "" : "s"}
+            <div className="flex flex-col gap-8">
+              <div className="flex flex-col gap-2">
+                <CultureMasthead name={cultureDoc.name} culture={cultureDoc.data as CultureProfile} />
+                <p className="font-mono text-[0.6875rem] tracking-wide uppercase opacity-60">
+                  {SIMULATION_GENERATIONS} generations simulated · {mythIds.length} founding myth{mythIds.length === 1 ? "" : "s"}
                 </p>
-              </section>
+              </div>
 
-              <section className="flex flex-col gap-2">
-                <h3 className="font-semibold" style={{ color: "var(--mc-primary)" }}>
+              <section className="flex flex-col gap-3">
+                <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
                   Codex Export
-                </h3>
+                </h2>
                 <CodexExport cultureId={cultureId} themeName={themeName} themeVariant={themeVariant} />
               </section>
 
-              <section className="flex flex-col gap-2">
-                <h3 className="font-semibold" style={{ color: "var(--mc-primary)" }}>
+              <section className="flex flex-col gap-3">
+                <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
                   Relationship Graph
-                </h3>
+                </h2>
                 <RelationshipGraph nodes={relationshipGraph.nodes} edges={relationshipGraph.edges} />
               </section>
 
-              <section className="flex flex-col gap-2">
-                <h3 className="font-semibold" style={{ color: "var(--mc-primary)" }}>
+              <section className="flex flex-col gap-3">
+                <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
                   Lineage Viewer
-                </h3>
+                </h2>
                 {mythIds.length > 1 && (
                   <select
                     value={selectedMythId ?? undefined}
                     onChange={(e) => setSelectedMythId(e.target.value as Id<"myths">)}
-                    className="w-fit rounded border bg-transparent px-2 py-1 text-xs"
+                    className="w-fit rounded-md border bg-transparent px-2 py-1 font-mono text-xs"
                     style={{ borderColor: "var(--mc-secondary)" }}
                   >
                     {mythIds.map((id, i) => (

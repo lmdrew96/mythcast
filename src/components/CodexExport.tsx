@@ -5,6 +5,7 @@ import { useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { ThemeName, ThemeVariantKind } from "@/lib/theming/palettes";
+import { Button } from "./ui/Button";
 
 export function CodexExport({ cultureId, themeName, themeVariant }: { cultureId: Id<"cultures">; themeName: ThemeName; themeVariant: ThemeVariantKind }) {
   const generate = useAction(api.codex.generate);
@@ -26,25 +27,13 @@ export function CodexExport({ cultureId, themeName, themeVariant }: { cultureId:
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => download("styled")}
-          disabled={pending !== null}
-          className="rounded border px-3 py-1 text-xs font-medium disabled:opacity-50"
-          style={{ borderColor: "var(--mc-secondary, currentColor)" }}
-        >
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" onClick={() => download("styled")} disabled={pending !== null}>
           {pending === "styled" ? "Generating…" : "Download styled PDF"}
-        </button>
-        <button
-          type="button"
-          onClick={() => download("printer-friendly")}
-          disabled={pending !== null}
-          className="rounded border px-3 py-1 text-xs font-medium disabled:opacity-50"
-          style={{ borderColor: "var(--mc-secondary, currentColor)" }}
-        >
+        </Button>
+        <Button variant="ghost" onClick={() => download("printer-friendly")} disabled={pending !== null}>
           {pending === "printer-friendly" ? "Generating…" : "Download printer-friendly PDF"}
-        </button>
+        </Button>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>

@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
+/*
+ * Shell chrome (page background/frame) is a deliberately quiet parchment/ink
+ * pair — distinct from the 5 in-world theme palettes (--mc-* vars, set by
+ * ThemePicker) so the shell reads as "the book's cover" and a generated
+ * culture's own theme reads as "the pages inside." The shell never competes
+ * with a culture's color identity; it just holds it.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f0e8;
+  --foreground: #1c1a17;
 }
 
 @theme inline {
@@ -10,17 +17,104 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #131217;
+    --foreground: #ede8de;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Readable long-form myth/culture prose: comfortable measure, a soft drop
+   cap on the opening paragraph evokes a printed mythology text without
+   tipping into pastiche. */
+.prose-myth {
+  max-width: 60ch;
+  line-height: 1.65;
+}
+
+.prose-myth-lead::first-letter {
+  font-family: var(--font-display);
+  font-size: 2.6em;
+  font-weight: 600;
+  float: left;
+  line-height: 0.85;
+  padding-right: 0.08em;
+  padding-top: 0.05em;
+}
+
+/* The themed panel's colors change per culture/theme selection — ease that
+   transition rather than snapping, so picking a theme feels like a real
+   moment instead of a flicker. */
+.mc-panel {
+  transition:
+    background-color 300ms ease,
+    color 300ms ease,
+    border-color 300ms ease;
+}
+
+/* Shared button chrome (see ui/Button.tsx for why outline-over-fill). Falls
+   back to the shell's own ink color outside any themed panel (e.g. "Generate
+   demo world", before a culture — and its theme — exists yet). */
+.mc-button-primary {
+  border-color: var(--mc-primary, var(--foreground));
+  color: var(--mc-primary, var(--foreground));
+  background-color: transparent;
+}
+.mc-button-primary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--mc-primary, var(--foreground)) 12%, transparent);
+}
+.mc-button-primary:focus-visible {
+  outline-color: var(--mc-primary, var(--foreground));
+}
+
+.mc-button-ghost {
+  border-color: var(--mc-secondary, currentColor);
+  color: var(--mc-text, var(--foreground));
+  background-color: transparent;
+}
+.mc-button-ghost:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--mc-secondary, var(--foreground)) 10%, transparent);
+}
+.mc-button-ghost:focus-visible {
+  outline-color: var(--mc-secondary, var(--foreground));
+}
+
+.mc-card {
+  background-color: var(--mc-surface, var(--background));
+  border: 1px solid color-mix(in srgb, var(--mc-secondary, var(--foreground)) 35%, transparent);
+  border-radius: 0.5rem;
+}
+
+.mc-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--mc-secondary, var(--foreground)) 45%, transparent);
+  color: var(--mc-text, var(--foreground));
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.55rem;
+}
+
+/* The "editorial dagger" marginalia treatment for a flagged personality
+   mismatch (spec: an intentional deviation, explicitly flagged rather than
+   silently generated — a hook for later myths, not an error). Styled like a
+   scholar's marginal annotation: smaller, italic, offset with a rule. */
+.mc-marginalia {
+  border-left: 2px solid var(--mc-secondary, var(--foreground));
+  padding-left: 0.65rem;
+  font-style: italic;
+  font-size: 0.8125rem;
+  opacity: 0.85;
 }
