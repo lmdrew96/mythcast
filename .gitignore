@@ -38,6 +38,9 @@ yarn-error.log*
 
 # IDE
 .idea/
+.claude/
+.agents/
+skills-lock.json
 
 # convex
 .convex/
