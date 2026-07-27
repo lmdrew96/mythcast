@@ -3,6 +3,7 @@ import { action, internalMutation, query } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { driftEventValidator } from "./validators";
 import { mutateMyth } from "../src/lib/myth/mutation";
+import { requireCultureOwner } from "./cultures";
 import type { God, Myth, MythVariant } from "../src/lib/types";
 import type { Id } from "./_generated/dataModel";
 
@@ -73,6 +74,7 @@ export const createAndSync = action({
 export const listByCulture = query({
   args: { cultureId: v.id("cultures") },
   handler: async (ctx, args) => {
+    await requireCultureOwner(ctx, args.cultureId);
     return await ctx.db
       .query("mythVariants")
       .withIndex("by_culture", (q) => q.eq("cultureId", args.cultureId))

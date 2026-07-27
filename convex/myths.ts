@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { generateMyths } from "../src/lib/myth/generate";
+import { requireCultureOwner } from "./cultures";
 import type { CultureProfile, God, Myth } from "../src/lib/types";
 import type { Id } from "./_generated/dataModel";
 
@@ -62,6 +63,7 @@ export const get = query({
 export const listByCulture = query({
   args: { cultureId: v.id("cultures") },
   handler: async (ctx, args) => {
+    await requireCultureOwner(ctx, args.cultureId);
     return await ctx.db
       .query("myths")
       .withIndex("by_culture", (q) => q.eq("cultureId", args.cultureId))

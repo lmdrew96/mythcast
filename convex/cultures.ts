@@ -4,6 +4,7 @@ import { api } from "./_generated/api";
 import { cultureSeedParamsValidator } from "./validators";
 import { generateCulture } from "../src/lib/culture/generate";
 import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 
 function capitalize(word: string): string {
   return word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word;
@@ -29,10 +30,26 @@ export const create = mutation({
   },
 });
 
+/**
+ * Loads a culture and throws unless the caller is its owner — the single
+ * ownership check shared by every query/action that reads culture-scoped
+ * data (gods, myths, mythVariants, codex export). Mirrors `create`'s own
+ * identity-or-"unauthenticated-dev" fallback so the `npx convex run` dev
+ * path (no Clerk session) still works against dev-created fixtures.
+ */
+export async function requireCultureOwner(ctx: QueryCtx, cultureId: Id<"cultures">): Promise<Doc<"cultures">> {
+  const culture = await ctx.db.get("cultures", cultureId);
+  if (!culture) throw new Error("Culture not found");
+  const identity = await ctx.auth.getUserIdentity();
+  const caller = identity?.tokenIdentifier ?? "unauthenticated-dev";
+  if (caller !== culture.owner) throw new Error("Not authorized to access this culture");
+  return culture;
+}
+
 export const get = query({
   args: { cultureId: v.id("cultures") },
   handler: async (ctx, args) => {
-    return await ctx.db.get("cultures", args.cultureId);
+    return await requireCultureOwner(ctx, args.cultureId);
   },
 });
 
