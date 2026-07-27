@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { THEME_VARIANTS, getThemeColors, themeToCssVars, type ThemeName, type ThemeVariantKind } from "@/lib/theming/palettes";
 
 type ThemedChildren = React.ReactNode | ((name: ThemeName, variant: ThemeVariantKind) => React.ReactNode);
@@ -10,6 +10,13 @@ export function ThemePicker({ suggested, children }: { suggested: ThemeName; chi
   const [variant, setVariant] = useState<ThemeVariantKind>("light");
 
   const cssVars = useMemo(() => themeToCssVars(getThemeColors(name, variant)), [name, variant]);
+
+  // Page-wide light/dark split: the shell (globals.css) follows the same
+  // toggle as the themed panel via this attribute, rather than a separate
+  // shell-only mode.
+  useEffect(() => {
+    document.documentElement.setAttribute("data-mc-mode", variant);
+  }, [variant]);
 
   const pillBase = "rounded-full border px-3 py-1 font-mono text-[0.6875rem] tracking-wide uppercase transition-colors duration-150";
   const pillActive = "border-foreground bg-foreground text-background";

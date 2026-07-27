@@ -1,11 +1,9 @@
 @import "tailwindcss";
 
 /*
- * Shell chrome (page background/frame) is a deliberately quiet parchment/ink
- * pair — distinct from the 5 in-world theme palettes (--mc-* vars, set by
- * ThemePicker) so the shell reads as "the book's cover" and a generated
- * culture's own theme reads as "the pages inside." The shell never competes
- * with a culture's color identity; it just holds it.
+ * Shell chrome (page background/frame) follows the same light/dark toggle
+ * as the themed panel (ThemePicker sets data-mc-mode on <html>) — a single
+ * page-wide light/dark split, not a separate shell mode.
  */
 :root {
   --background: #f3f0e8;
@@ -20,17 +18,18 @@
   --font-display: var(--font-fraunces);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #131217;
-    --foreground: #ede8de;
-  }
+:root[data-mc-mode="dark"] {
+  --background: #131217;
+  --foreground: #ede8de;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
 }
 
 /* Readable long-form myth/culture prose: comfortable measure, a soft drop
