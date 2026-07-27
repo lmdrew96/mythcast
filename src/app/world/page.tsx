@@ -104,6 +104,17 @@ export default function WorldPage() {
     }
   }
 
+  function returnToWorldPicker() {
+    setCultureId(null);
+    setRunId(null);
+    setSimulationDone(false);
+    setMythIds([]);
+    setSelectedMythId(null);
+    setLineage([]);
+    setRelationshipGraph({ nodes: [], edges: [] });
+    setError(null);
+  }
+
   async function runSimulation() {
     if (!runId) return;
     setGenerating(true);
@@ -191,13 +202,18 @@ export default function WorldPage() {
         <ThemePicker suggested={suggested}>
           {(themeName, themeVariant) => (
             <div className="flex flex-col gap-8">
-              <div className="flex flex-col gap-2">
-                <CultureMasthead name={cultureDoc.name} culture={cultureDoc.data as CultureProfile} />
-                <p className="font-mono text-[0.6875rem] tracking-wide uppercase opacity-60">
-                  {simulationDone
-                    ? `${SIMULATION_GENERATIONS} generations simulated · ${mythIds.length} founding myth${mythIds.length === 1 ? "" : "s"}`
-                    : `Culture created · ${mythIds.length} founding myth${mythIds.length === 1 ? "" : "s"} · ready to simulate`}
-                </p>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-2">
+                  <CultureMasthead name={cultureDoc.name} culture={cultureDoc.data as CultureProfile} />
+                  <p className="font-mono text-[0.6875rem] tracking-wide uppercase opacity-60">
+                    {simulationDone
+                      ? `${SIMULATION_GENERATIONS} generations simulated · ${mythIds.length} founding myth${mythIds.length === 1 ? "" : "s"}`
+                      : `Culture created · ${mythIds.length} founding myth${mythIds.length === 1 ? "" : "s"} · ready to simulate`}
+                  </p>
+                </div>
+                <Button variant="ghost" onClick={returnToWorldPicker} disabled={generating}>
+                  ← Start a new world
+                </Button>
               </div>
 
               {!simulationDone && runId && (
