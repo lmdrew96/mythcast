@@ -3,6 +3,7 @@ import { action, mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { cultureSeedParamsValidator } from "./validators";
 import { generateCulture } from "../src/lib/culture/generate";
+import { requireWorldOwner } from "./worlds";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
@@ -16,9 +17,10 @@ function capitalize(word: string): string {
 // Neo4j edges have something to reference, and needs to be callable via
 // `npx convex run` (which has no Clerk session) to verify the graph sync.
 export const create = mutation({
-  args: { seed: cultureSeedParamsValidator, rngSeed: v.optional(v.number()) },
+  args: { seed: cultureSeedParamsValidator, rngSeed: v.optional(v.number()), worldId: v.optional(v.id("worlds")) },
   returns: v.id("cultures"),
   handler: async (ctx, args) => {
+    if (args.worldId) await requireWorldOwner(ctx, args.worldId);
     const identity = await ctx.auth.getUserIdentity();
     const culture = generateCulture(args.seed, args.rngSeed);
     return await ctx.db.insert("cultures", {
@@ -26,6 +28,7 @@ export const create = mutation({
       name: `${capitalize(args.seed.cosmologyStance)} ${capitalize(args.seed.climate)} culture`,
       data: culture,
       createdAt: Date.now(),
+      worldId: args.worldId,
     });
   },
 });

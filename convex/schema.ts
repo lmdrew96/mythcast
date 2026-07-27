@@ -8,12 +8,26 @@ import { v } from "convex/values";
 // shape stabilizes.
 
 export default defineSchema({
+  // A world groups 2+ cultures so contact/migration drift events can
+  // reference a real second culture instead of being a pure flavor label
+  // (spec Section 5/7's "syncretism with another culture's telling").
+  // Optional on cultures below so every pre-existing, ungrouped culture is
+  // unaffected — a world is opt-in, not a required wrapper.
+  worlds: defineTable({
+    owner: v.string(), // Clerk user id
+    name: v.string(),
+    createdAt: v.number(),
+  }).index("by_owner", ["owner"]),
+
   cultures: defineTable({
     owner: v.string(), // Clerk user id
     name: v.string(),
     data: v.any(), // CultureProfile
     createdAt: v.number(),
-  }).index("by_owner", ["owner"]),
+    worldId: v.optional(v.id("worlds")),
+  })
+    .index("by_owner", ["owner"])
+    .index("by_world", ["worldId"]),
 
   gods: defineTable({
     cultureId: v.id("cultures"),
@@ -60,6 +74,10 @@ export default defineSchema({
     generation: v.number(),
     type: v.union(v.literal("war"), v.literal("famine"), v.literal("migration"), v.literal("contact"), v.literal("disaster")),
     source: v.union(v.literal("manual"), v.literal("procedural")),
+    // The real second culture a contact/migration event references — unset
+    // for war/famine/disaster, and for contact/migration on a culture with
+    // no world (falls back to the pre-multi-culture generic behavior).
+    targetCultureId: v.optional(v.id("cultures")),
   }).index("by_run_and_generation", ["runId", "generation"]),
 
   // One row per founding myth in the run's culture, tracking the current tip

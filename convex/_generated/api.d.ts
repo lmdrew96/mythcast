@@ -19,6 +19,7 @@ import type * as mythVariants from "../mythVariants.js";
 import type * as myths from "../myths.js";
 import type * as simulation from "../simulation.js";
 import type * as validators from "../validators.js";
+import type * as worlds from "../worlds.js";
 
 import type {
   ApiFromModules,
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   myths: typeof myths;
   simulation: typeof simulation;
   validators: typeof validators;
+  worlds: typeof worlds;
 }>;
 
 /**

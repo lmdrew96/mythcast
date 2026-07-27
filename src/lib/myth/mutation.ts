@@ -127,6 +127,32 @@ function omit(events: MythEvent[], pantheon: God[], rng: Rng): MythEvent[] {
   return next;
 }
 
+/**
+ * Real cross-culture syncretism (spec: "syncretism with another culture's
+ * telling") — folds an actual foreign god's name into an event that already
+ * names a local god, rather than a generic reworded retelling. Only usable
+ * when `foreignPantheon` (the target culture's real gods) is non-empty;
+ * mutateMyth falls back to the generic event-biased operations otherwise,
+ * so a contact/migration event on a culture with no world behaves exactly
+ * as it did before multi-culture worlds existed.
+ */
+function syncretize(events: MythEvent[], pantheon: God[], foreignPantheon: God[], rng: Rng): MythEvent[] {
+  const next = cloneEvents(events);
+  const candidates = next.filter((e) => e.involvedGodIds.length > 0);
+  const target = candidates.length > 0 ? rng.pick(candidates) : rng.pick(next);
+  const index = next.indexOf(target);
+
+  const localGod = pantheon.find((g) => target.involvedGodIds.includes(g.id)) ?? rng.pick(pantheon);
+  const foreignGod = rng.pick(foreignPantheon);
+
+  next[index] = {
+    ...target,
+    description: `${target.description} Traders and travelers now insist ${foreignGod.name}, a god of the people beyond, is simply ${localGod.name} by another name.`,
+    derivedFrom: Array.from(new Set([...target.derivedFrom, `foreign-god:${foreignGod.id}`])),
+  };
+  return next;
+}
+
 // ---------------------------------------------------------------------------
 // Event-to-operation bias (open implementation question, Section 10 #2)
 // ---------------------------------------------------------------------------
@@ -188,14 +214,24 @@ export function diffMythEvents(before: MythEvent[], after: MythEvent[]): MythEve
  * mutation per generation reads as real drift; several at once would read
  * as noise) plus, independently, a small chance of decay.
  */
-export function mutateMyth(parent: MythLike, pantheon: God[], generation: number, event: DriftEvent | null, rngSeed?: number): MythVariant {
+export function mutateMyth(
+  parent: MythLike,
+  pantheon: God[],
+  generation: number,
+  event: DriftEvent | null,
+  rngSeed?: number,
+  foreignPantheon?: God[],
+): MythVariant {
   const resolvedSeed = rngSeed ?? mutationRngSeed(parent, generation);
   const rng = new Rng(resolvedSeed);
 
   let events = cloneEvents(parent.events);
   const mutationOperations: string[] = [];
 
-  if (event) {
+  if (event && (event.type === "contact" || event.type === "migration") && foreignPantheon && foreignPantheon.length > 0) {
+    events = syncretize(events, pantheon, foreignPantheon, rng);
+    mutationOperations.push("syncretism");
+  } else if (event) {
     const weights = EVENT_OPERATION_WEIGHTS[event.type];
     const operations = Object.keys(weights) as EventBiasedOperation[];
     const chosen = rng.weightedPick(operations, (op) => weights[op]);

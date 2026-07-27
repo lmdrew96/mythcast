@@ -42,9 +42,12 @@ export default function WorldPage() {
   const getLineageView = useAction(api.lineage.getLineageView);
   const getRelationshipGraph = useAction(api.lineage.getRelationshipGraph);
   const loadForResume = useAction(api.cultures.loadForResume);
+  const createWorldEntity = useMutation(api.worlds.create);
   const myCultures = useQuery(api.cultures.listByOwner);
 
   const [seedParams, setSeedParams] = useState<CultureSeedParams>(DEFAULT_SEED_PARAMS);
+  const [newWorldName, setNewWorldName] = useState("");
+  const [addingToWorld, setAddingToWorld] = useState(false);
   const [cultureId, setCultureId] = useState<Id<"cultures"> | null>(null);
   const [runId, setRunId] = useState<Id<"simulationRuns"> | null>(null);
   const [simulationDone, setSimulationDone] = useState(false);
@@ -58,8 +61,10 @@ export default function WorldPage() {
 
   const cultureDoc = useQuery(api.cultures.get, cultureId ? { cultureId } : "skip");
   const mythDocs = useQuery(api.myths.listByCulture, cultureId ? { cultureId } : "skip");
+  const worldCultures = useQuery(api.worlds.listCultures, cultureDoc?.worldId ? { worldId: cultureDoc.worldId } : "skip");
 
-  async function createWorld() {
+  /** Creates a culture (and its pantheon/myths/run), optionally inside an existing world — the shared core of both "Generate world" (no worldId) and "Add another culture to this world" (worldId from the currently loaded culture). */
+  async function generateCulture(worldId?: Id<"worlds">) {
     setGenerating(true);
     setError(null);
     try {
@@ -67,7 +72,7 @@ export default function WorldPage() {
       // "Generate world" click reproduce the exact same culture/myths.
       const runSeed = Math.floor(Math.random() * 2 ** 31);
       setProgressStep("Building culture…");
-      const newCultureId = await createCulture({ seed: seedParams, rngSeed: runSeed });
+      const newCultureId = await createCulture({ seed: seedParams, rngSeed: runSeed, worldId });
       setProgressStep("Generating pantheon…");
       await createPantheon({ cultureId: newCultureId, rngSeed: runSeed });
       setProgressStep("Writing founding myths…");
@@ -82,9 +87,31 @@ export default function WorldPage() {
       setMythIds(newMythIds);
       setSelectedMythId(newMythIds[0] ?? null);
       setRunId(newRunId);
+      setSimulationDone(false);
+      setAddingToWorld(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate world");
     } finally {
+      setGenerating(false);
+      setProgressStep(null);
+    }
+  }
+
+  /** Entry point for the "no culture loaded yet" generate flow — starts a new world first if a name was given, then creates the culture inside it. */
+  async function startGenerating() {
+    if (!newWorldName.trim()) {
+      await generateCulture();
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+    try {
+      setProgressStep("Starting a new world…");
+      const worldId = await createWorldEntity({ name: newWorldName.trim() });
+      setNewWorldName("");
+      await generateCulture(worldId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start world");
       setGenerating(false);
       setProgressStep(null);
     }
@@ -116,6 +143,8 @@ export default function WorldPage() {
     setLineage([]);
     setRelationshipGraph({ nodes: [], edges: [] });
     setError(null);
+    setAddingToWorld(false);
+    setNewWorldName("");
   }
 
   async function runSimulation() {
@@ -194,7 +223,20 @@ export default function WorldPage() {
             Choose seed parameters, simulate {SIMULATION_GENERATIONS} generations of drift, and see it here — codex, lineage, and pantheon.
           </p>
           <SeedForm value={seedParams} onChange={setSeedParams} disabled={generating} />
-          <Button onClick={createWorld} disabled={generating}>
+          <label className="flex flex-col gap-1 text-xs">
+            <span className="font-mono tracking-wide uppercase opacity-60">Start a new world (optional)</span>
+            <input
+              type="text"
+              value={newWorldName}
+              onChange={(e) => setNewWorldName(e.target.value)}
+              placeholder="e.g. The Salt Coast"
+              disabled={generating}
+              className="rounded-md border bg-transparent px-2 py-1.5 text-sm"
+              style={{ borderColor: "var(--mc-secondary)" }}
+            />
+            <span className="opacity-60">Name a world to let contact/migration events reference cultures you add to it later.</span>
+          </label>
+          <Button onClick={() => startGenerating()} disabled={generating}>
             {generating ? (progressStep ?? "Generating world…") : "Generate world"}
           </Button>
         </div>
@@ -219,6 +261,43 @@ export default function WorldPage() {
                 </Button>
               </div>
 
+              {cultureDoc.worldId && (
+                <section className="mc-card flex flex-col gap-3 p-4">
+                  <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
+                    This World
+                  </h2>
+                  {worldCultures && worldCultures.filter((c) => c._id !== cultureId).length > 0 && (
+                    <ul className="flex flex-col gap-1">
+                      {worldCultures
+                        .filter((c) => c._id !== cultureId)
+                        .map((c) => (
+                          <li key={c._id}>
+                            <button
+                              type="button"
+                              onClick={() => loadCulture(c._id)}
+                              disabled={generating}
+                              className="text-sm underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground disabled:opacity-50"
+                            >
+                              {c.name}
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                  <Button variant="ghost" onClick={() => setAddingToWorld((v) => !v)} disabled={generating}>
+                    {addingToWorld ? "Cancel" : "+ Add another culture to this world"}
+                  </Button>
+                  {addingToWorld && (
+                    <div className="flex flex-col items-start gap-3">
+                      <SeedForm value={seedParams} onChange={setSeedParams} disabled={generating} />
+                      <Button onClick={() => generateCulture(cultureDoc.worldId)} disabled={generating}>
+                        {generating ? (progressStep ?? "Generating culture…") : "Generate culture"}
+                      </Button>
+                    </div>
+                  )}
+                </section>
+              )}
+
               {mythDocs && mythDocs.length > 0 && (
                 <section className="flex flex-col gap-3">
                   <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
@@ -235,7 +314,7 @@ export default function WorldPage() {
 
               {!simulationDone && runId && (
                 <section className="flex flex-col gap-3">
-                  <EventQueue runId={runId} totalGenerations={SIMULATION_GENERATIONS} />
+                  <EventQueue runId={runId} totalGenerations={SIMULATION_GENERATIONS} cultureId={cultureId} worldId={cultureDoc.worldId} />
                   <Button onClick={runSimulation} disabled={generating}>
                     {generating ? (progressStep ?? "Simulating…") : `Run ${SIMULATION_GENERATIONS}-generation simulation`}
                   </Button>

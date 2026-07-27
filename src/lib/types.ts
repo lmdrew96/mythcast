@@ -134,6 +134,8 @@ export type DriftEventType = "war" | "famine" | "migration" | "contact" | "disas
 export type DriftEvent = {
   type: DriftEventType;
   generation: number;
+  /** The real second culture a contact/migration event references (spec's "syncretism with another culture's telling") — set only when the culture belongs to a multi-culture world. Unused by war/famine/disaster. */
+  targetCultureId?: string;
 };
 
 /** One event slot's before/after state in a variant-vs-parent comparison (spec Section 8's "diff-style comparison between two generation snapshots"). */

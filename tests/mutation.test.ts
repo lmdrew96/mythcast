@@ -125,4 +125,31 @@ describe("mutateMyth", () => {
     }
     expect(conflationSeen).toBe(true);
   });
+
+  it("without a foreignPantheon, contact/migration fall back to the generic event-biased operations (pre-multi-culture behavior)", () => {
+    const { pantheon, myth } = setup();
+    for (const type of ["contact", "migration"] as const) {
+      for (let s = 0; s < 20; s++) {
+        const variant = mutateMyth(myth, pantheon, 1, { type, generation: 1 }, s);
+        expect(variant.mutationOperations).not.toContain("syncretism");
+      }
+    }
+  });
+
+  it("with a foreignPantheon, contact/migration produce a real syncretism naming an actual foreign god", () => {
+    const { pantheon, myth } = setup(2);
+    const foreignPantheon = generatePantheon(generateCulture(seed, 99), 99);
+    for (const type of ["contact", "migration"] as const) {
+      const variant = mutateMyth(myth, pantheon, 1, { type, generation: 1 }, 7, foreignPantheon);
+      expect(variant.mutationOperations).toContain("syncretism");
+      const foreignGodNamed = foreignPantheon.some((g) => variant.events.some((e) => e.description.includes(g.name)));
+      expect(foreignGodNamed).toBe(true);
+    }
+  });
+
+  it("does not use syncretism when foreignPantheon is empty", () => {
+    const { pantheon, myth } = setup();
+    const variant = mutateMyth(myth, pantheon, 1, { type: "contact", generation: 1 }, 7, []);
+    expect(variant.mutationOperations).not.toContain("syncretism");
+  });
 });

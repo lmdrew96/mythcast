@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import { internal, api } from "./_generated/api";
+import { Rng, hashString } from "../src/lib/rng";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { planGeneration, simulationMutationSeed } from "../src/lib/simulation/run";
@@ -60,6 +61,7 @@ export const injectEvent = mutation({
     runId: v.id("simulationRuns"),
     generation: v.number(),
     type: v.union(v.literal("war"), v.literal("famine"), v.literal("migration"), v.literal("contact"), v.literal("disaster")),
+    targetCultureId: v.optional(v.id("cultures")),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -69,14 +71,29 @@ export const injectEvent = mutation({
     if (args.generation <= run.currentGeneration) throw new Error("Can only inject events at a generation the run hasn't reached yet");
     if (args.generation > run.totalGenerations) throw new Error("Generation is beyond this run's total length");
 
+    let targetCultureId: Id<"cultures"> | undefined;
+    if (args.targetCultureId) {
+      if (args.type !== "contact" && args.type !== "migration") {
+        throw new Error("targetCultureId only applies to contact/migration events");
+      }
+      const culture = await ctx.db.get("cultures", run.cultureId);
+      const target = await ctx.db.get("cultures", args.targetCultureId);
+      if (!culture || !target) throw new Error("Culture not found");
+      if (!culture.worldId || target.worldId !== culture.worldId) {
+        throw new Error("targetCultureId must be a different culture in the same world");
+      }
+      if (args.targetCultureId === run.cultureId) throw new Error("A culture cannot have contact/migration with itself");
+      targetCultureId = args.targetCultureId;
+    }
+
     const existing = await ctx.db
       .query("simulationEvents")
       .withIndex("by_run_and_generation", (q) => q.eq("runId", args.runId).eq("generation", args.generation))
       .unique();
     if (existing) {
-      await ctx.db.patch("simulationEvents", existing._id, { type: args.type, source: "manual" });
+      await ctx.db.patch("simulationEvents", existing._id, { type: args.type, source: "manual", targetCultureId });
     } else {
-      await ctx.db.insert("simulationEvents", { runId: args.runId, generation: args.generation, type: args.type, source: "manual" });
+      await ctx.db.insert("simulationEvents", { runId: args.runId, generation: args.generation, type: args.type, source: "manual", targetCultureId });
     }
     return null;
   },
@@ -117,10 +134,51 @@ export const advanceGenerationState = internalMutation({
       .withIndex("by_run_and_generation", (q) => q.eq("runId", args.runId).eq("generation", nextGeneration))
       .unique();
 
-    const plan = planGeneration(culture, nextGeneration, run.seed, queuedEvent ? { type: queuedEvent.type, generation: nextGeneration } : null);
+    const plan = planGeneration(
+      culture,
+      nextGeneration,
+      run.seed,
+      queuedEvent ? { type: queuedEvent.type, generation: nextGeneration, targetCultureId: queuedEvent.targetCultureId } : null,
+    );
 
-    if (plan.source === "procedural" && plan.event) {
-      await ctx.db.insert("simulationEvents", { runId: args.runId, generation: nextGeneration, type: plan.event.type, source: "procedural" });
+    // A procedural roll never sets a targetCultureId (rollProceduralEvent has
+    // no DB access) — if this culture belongs to a world, resolve one now
+    // from a sibling culture, deterministically from the run seed so the
+    // same seed always reproduces the same run. Manual injections already
+    // carry a validated targetCultureId (see injectEvent) and pass through
+    // unchanged; a culture with no world (or no siblings) falls back to the
+    // pre-multi-culture generic mutation behavior.
+    let resolvedEvent = plan.event;
+    if (resolvedEvent && (resolvedEvent.type === "contact" || resolvedEvent.type === "migration") && !resolvedEvent.targetCultureId && cultureDoc.worldId) {
+      const worldId = cultureDoc.worldId;
+      const siblings = await ctx.db
+        .query("cultures")
+        .withIndex("by_world", (q) => q.eq("worldId", worldId))
+        .collect();
+      const others = siblings.filter((c) => c._id !== run.cultureId);
+      if (others.length > 0) {
+        const rng = new Rng(hashString(run.seed + ":target:" + nextGeneration) >>> 0);
+        resolvedEvent = { ...resolvedEvent, targetCultureId: rng.pick(others)._id };
+      }
+    }
+
+    if (plan.source === "procedural" && resolvedEvent) {
+      await ctx.db.insert("simulationEvents", {
+        runId: args.runId,
+        generation: nextGeneration,
+        type: resolvedEvent.type,
+        source: "procedural",
+        targetCultureId: resolvedEvent.targetCultureId as Id<"cultures"> | undefined,
+      });
+    }
+
+    let foreignPantheon: God[] | undefined;
+    if (resolvedEvent?.targetCultureId) {
+      const foreignGodDocs = await ctx.db
+        .query("gods")
+        .withIndex("by_culture", (q) => q.eq("cultureId", resolvedEvent!.targetCultureId as Id<"cultures">))
+        .collect();
+      foreignPantheon = foreignGodDocs.map((d) => d.data as God);
     }
 
     const heads = await ctx.db
@@ -140,7 +198,7 @@ export const advanceGenerationState = internalMutation({
       const parentAsMyth = parentDocToMyth(parentData, parentDoc._id, run.cultureId, nextGeneration);
 
       const mutationSeed = simulationMutationSeed(run.seed, head.foundingMythId, nextGeneration);
-      const variant: MythVariant = mutateMyth(parentAsMyth, pantheon, nextGeneration, plan.event, mutationSeed);
+      const variant: MythVariant = mutateMyth(parentAsMyth, pantheon, nextGeneration, resolvedEvent, mutationSeed, foreignPantheon);
 
       const variantId = await ctx.db.insert("mythVariants", {
         parentMythId: head.currentVariantId,
