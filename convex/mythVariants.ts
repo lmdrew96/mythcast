@@ -1,14 +1,21 @@
 import { v } from "convex/values";
 import { action, internalMutation, query } from "./_generated/server";
 import { internal, api } from "./_generated/api";
+import { driftEventValidator } from "./validators";
 import { mutateMyth } from "../src/lib/myth/mutation";
 import type { God, Myth, MythVariant } from "../src/lib/types";
 import type { Id } from "./_generated/dataModel";
 
-const driftEventValidator = v.object({
-  type: v.union(v.literal("war"), v.literal("famine"), v.literal("migration"), v.literal("contact"), v.literal("disaster")),
-  generation: v.number(),
-});
+/** A variant's parent is either an original founding myth (has `.title`) or an earlier variant (drift chains beyond one hop) — mutateMyth only reads `.id`/`.events` off its `parent` argument, so this builds a minimal Myth-shaped view that works for either case. Shared by insertVariant and the Simulation Loop (Phase 8), which advances every myth lineage in a culture one generation at a time. */
+export function parentDocToMyth(parentData: Myth | MythVariant, parentDocId: string, cultureId: string, generation: number): Myth {
+  return {
+    id: "title" in parentData ? parentData.id : parentDocId,
+    title: "title" in parentData ? parentData.title : "(variant)",
+    events: parentData.events,
+    cultureId,
+    generation: generation - 1,
+  };
+}
 
 const createArgs = {
   cultureId: v.id("cultures"),
@@ -28,17 +35,7 @@ export const insertVariant = internalMutation({
       args.parentTable === "myths" ? await ctx.db.get("myths", args.parentId as Id<"myths">) : await ctx.db.get("mythVariants", args.parentId as Id<"mythVariants">);
     if (!parentDoc) throw new Error("Parent myth/variant not found");
     const parentData = parentDoc.data as Myth | MythVariant;
-
-    // mutateMyth only reads `.id` and `.events` off its `parent` argument —
-    // build a minimal Myth-shaped view so it works whether the parent is an
-    // original myth or an earlier variant (which has no `.title`).
-    const parentAsMyth: Myth = {
-      id: "title" in parentData ? parentData.id : parentDoc._id,
-      title: "title" in parentData ? parentData.title : "(variant)",
-      events: parentData.events,
-      cultureId: args.cultureId,
-      generation: args.generation - 1,
-    };
+    const parentAsMyth = parentDocToMyth(parentData, parentDoc._id, args.cultureId, args.generation);
 
     const godDocs = await ctx.db
       .query("gods")

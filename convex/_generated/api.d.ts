@@ -15,6 +15,7 @@ import type * as graph_queries from "../graph/queries.js";
 import type * as graph_sync from "../graph/sync.js";
 import type * as mythVariants from "../mythVariants.js";
 import type * as myths from "../myths.js";
+import type * as simulation from "../simulation.js";
 import type * as validators from "../validators.js";
 
 import type {
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   "graph/sync": typeof graph_sync;
   mythVariants: typeof mythVariants;
   myths: typeof myths;
+  simulation: typeof simulation;
   validators: typeof validators;
 }>;
 

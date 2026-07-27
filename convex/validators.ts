@@ -5,6 +5,11 @@
 
 import { v } from "convex/values";
 
+export const driftEventValidator = v.object({
+  type: v.union(v.literal("war"), v.literal("famine"), v.literal("migration"), v.literal("contact"), v.literal("disaster")),
+  generation: v.number(),
+});
+
 export const cultureSeedParamsValidator = v.object({
   climate: v.union(v.literal("arid"), v.literal("temperate"), v.literal("arctic"), v.literal("tropical"), v.literal("volcanic")),
   resourceScarcity: v.union(v.literal("abundant"), v.literal("moderate"), v.literal("scarce"), v.literal("famine-prone")),
