@@ -52,12 +52,15 @@ export default function WorldPage() {
     setGenerating(true);
     setError(null);
     try {
-      const newCultureId = await createCulture({ seed: DEMO_SEED, rngSeed: 1 });
-      await createPantheon({ cultureId: newCultureId, rngSeed: 1 });
-      const newMythIds = await createMyths({ cultureId: newCultureId, rngSeed: 1 });
-      await syncGodRelationships({ cultureId: newCultureId, rngSeed: 1 });
+      // A fresh random seed per run — a hardcoded seed would make every
+      // "Generate demo world" click reproduce the exact same culture/myths.
+      const runSeed = Math.floor(Math.random() * 2 ** 31);
+      const newCultureId = await createCulture({ seed: DEMO_SEED, rngSeed: runSeed });
+      await createPantheon({ cultureId: newCultureId, rngSeed: runSeed });
+      const newMythIds = await createMyths({ cultureId: newCultureId, rngSeed: runSeed });
+      await syncGodRelationships({ cultureId: newCultureId, rngSeed: runSeed });
       await syncDerivationTrace({ cultureId: newCultureId });
-      const runId = await startRun({ cultureId: newCultureId, totalGenerations: SIMULATION_GENERATIONS, seed: 1 });
+      const runId = await startRun({ cultureId: newCultureId, totalGenerations: SIMULATION_GENERATIONS, seed: runSeed });
       await runToCompletion({ runId });
 
       setCultureId(newCultureId);
