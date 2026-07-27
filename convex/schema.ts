@@ -29,8 +29,14 @@ export default defineSchema({
   }).index("by_culture", ["cultureId"]),
 
   mythVariants: defineTable({
-    parentMythId: v.id("myths"),
+    // A variant's parent is either the original founding myth (generation 1)
+    // or an earlier variant (generation 2+, drift chains beyond one hop) —
+    // Phase 7's Mutation/Drift Engine produces multi-generation lineages.
+    parentMythId: v.union(v.id("myths"), v.id("mythVariants")),
+    cultureId: v.id("cultures"),
     generation: v.number(),
     data: v.any(), // MythVariant
-  }).index("by_parent", ["parentMythId"]),
+  })
+    .index("by_parent", ["parentMythId"])
+    .index("by_culture", ["cultureId"]),
 });

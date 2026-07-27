@@ -114,7 +114,23 @@ export type Myth = {
   generation: number; // 0 = founding myth
 };
 
-/** A drifted copy of a myth produced by the mutation engine (Phase 7) — not used yet in Phase 0, defined now so the pipeline type-checks end to end. */
+/** War/famine/migration/contact/disaster — injected events that bias myth mutation (spec Section 5/7). Phase 7 (Mutation/Drift Engine) consumes these; Phase 8 (Simulation Loop) is what actually injects them manually or rolls them procedurally. */
+export type DriftEventType = "war" | "famine" | "migration" | "contact" | "disaster";
+
+export type DriftEvent = {
+  type: DriftEventType;
+  generation: number;
+};
+
+/** One event slot's before/after state in a variant-vs-parent comparison (spec Section 8's "diff-style comparison between two generation snapshots"). */
+export type MythEventDiff = {
+  index: number;
+  changed: boolean;
+  before: MythEvent;
+  after: MythEvent;
+};
+
+/** A drifted copy of a myth produced by the mutation engine (Phase 7). */
 export type MythVariant = {
   id: string;
   parentMythId: string;
@@ -122,4 +138,5 @@ export type MythVariant = {
   events: MythEvent[];
   mutationOperations: string[];
   triggeringEventId?: string;
+  diff: MythEventDiff[];
 };
