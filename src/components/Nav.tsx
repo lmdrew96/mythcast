@@ -4,10 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 
-const LINKS = [
-  { href: "/", label: "Generator Preview" },
-  { href: "/world", label: "World Output" },
-];
+const LINKS = [{ href: "/world", label: "World Output" }];
 
 export function Nav() {
   const pathname = usePathname();
