@@ -1,25 +1,11 @@
-// seed → culture → pantheon → myth pipeline. Culture generation is real
-// (Phase 2, src/lib/culture/); pantheon and myth are still stubs pending
-// Phases 3-4.
+// seed → culture → pantheon → myth pipeline. Culture (Phase 2) and Pantheon
+// (Phase 3) generation are real; myth is still a stub pending Phase 4.
 
 import { generateCulture } from "./culture/generate";
-import type { CultureSeedParams, God, Myth } from "./types";
-import type { CultureProfile } from "./types";
+import { generatePantheon } from "./pantheon/generate";
+import type { CultureProfile, CultureSeedParams, God, Myth } from "./types";
 
-export { generateCulture };
-
-export function generatePantheon(culture: CultureProfile): God[] {
-  return [
-    {
-      id: "stub-god-1",
-      name: "Stub Deity",
-      domains: { value: ["stub-domain"], derivedFrom: ["culture.coreValues"] },
-      personality: { value: ["stub-trait"], derivedFrom: ["culture.coreValues"] },
-      personalityMismatch: { isMismatch: false },
-      cultureId: culture.id,
-    },
-  ];
-}
+export { generateCulture, generatePantheon };
 
 export function generateMyth(culture: CultureProfile, pantheon: God[]): Myth {
   return {

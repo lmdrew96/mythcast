@@ -17,7 +17,7 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-8 font-mono text-sm">
-      <h1 className="text-xl font-bold">Mythcast — Culture Generator (pantheon/myth still stubs)</h1>
+      <h1 className="text-xl font-bold">Mythcast — Culture + Pantheon Generators (myth still stub)</h1>
       <section>
         <h2 className="font-semibold">Culture</h2>
         <pre className="overflow-x-auto rounded bg-black/5 p-3">
