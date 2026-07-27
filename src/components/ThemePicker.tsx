@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import { THEME_VARIANTS, getThemeColors, themeToCssVars, type ThemeName, type ThemeVariantKind } from "@/lib/theming/palettes";
 
-export function ThemePicker({ suggested, children }: { suggested: ThemeName; children: React.ReactNode }) {
+type ThemedChildren = React.ReactNode | ((name: ThemeName, variant: ThemeVariantKind) => React.ReactNode);
+
+export function ThemePicker({ suggested, children }: { suggested: ThemeName; children: ThemedChildren }) {
   const [name, setName] = useState<ThemeName>(suggested);
   const [variant, setVariant] = useState<ThemeVariantKind>("light");
 
@@ -49,7 +51,7 @@ export function ThemePicker({ suggested, children }: { suggested: ThemeName; chi
         } as React.CSSProperties}
         className="rounded-lg border-2 p-4"
       >
-        {children}
+        {typeof children === "function" ? children(name, variant) : children}
       </div>
     </div>
   );

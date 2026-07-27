@@ -5,6 +5,14 @@
 
 import { v } from "convex/values";
 
+export const themeNameValidator = v.union(
+  v.literal("nightfall-indigo"),
+  v.literal("glacial-current"),
+  v.literal("autumn-hearth"),
+  v.literal("ivory-ascension"),
+  v.literal("moonlit-thicket"),
+);
+
 export const driftEventValidator = v.object({
   type: v.union(v.literal("war"), v.literal("famine"), v.literal("migration"), v.literal("contact"), v.literal("disaster")),
   generation: v.number(),

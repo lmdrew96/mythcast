@@ -10,6 +10,6 @@ export default defineConfig({
   test: {
     // Scoped to tests/ only — keeps vitest from touching convex/ (whose
     // bundler isn't meant to see test-framework imports).
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
   },
 });

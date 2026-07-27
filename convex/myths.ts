@@ -52,6 +52,13 @@ export const createMyths = mutation({
   },
 });
 
+export const get = query({
+  args: { mythId: v.id("myths") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get("myths", args.mythId);
+  },
+});
+
 export const listByCulture = query({
   args: { cultureId: v.id("cultures") },
   handler: async (ctx, args) => {

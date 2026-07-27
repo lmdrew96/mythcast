@@ -44,6 +44,66 @@ export const mythsDerivedFromGod = action({
   },
 });
 
+/**
+ * Ordered myth-variant lineage for a founding myth (spec Section 8's
+ * lineage viewer — "either a diff-style comparison... or a Neo4j graph
+ * render"). Same query shape as mythsDerivedFromGod above: origin's variants
+ * are exactly the nodes reachable by walking DERIVED_FROM backward from it,
+ * and path length is the generation number for free (each hop is one
+ * generation of drift). Generation 0 is the founding myth itself.
+ */
+export const mythLineageChain = action({
+  args: { foundingMythId: v.id("myths"), maxGenerations: v.number() },
+  returns: v.array(v.object({ mythId: v.string(), generation: v.number() })),
+  handler: async (ctx, args) => {
+    const maxGen = Math.max(0, Math.min(500, Math.floor(args.maxGenerations)));
+    return withSession(async (session) => {
+      const result = await session.executeRead((tx) =>
+        tx.run(
+          `MATCH path = (root:Myth {id: $foundingMythId})<-[:DERIVED_FROM*0..${maxGen}]-(descendant:Myth)
+           RETURN DISTINCT descendant.id AS mythId, length(path) AS generation
+           ORDER BY generation`,
+          { foundingMythId: args.foundingMythId },
+        ),
+      );
+      return result.records.map((r) => ({
+        mythId: r.get("mythId") as string,
+        generation: Number(r.get("generation")),
+      }));
+    });
+  },
+});
+
+/**
+ * Pantheon relationship graph (spec Section 8's relationship graph view —
+ * gods as nodes, relationships as edges). Scoped to a specific pantheon by
+ * passing in that culture's god ids (fetched by the caller via
+ * gods.listByCulture) rather than a cultureId property on :God nodes, since
+ * syncGodRelationships doesn't currently stamp one.
+ */
+export const pantheonRelationshipGraph = action({
+  args: { godIds: v.array(v.id("gods")) },
+  returns: v.array(v.object({ fromId: v.string(), relType: v.string(), toId: v.string() })),
+  handler: async (ctx, args) => {
+    if (args.godIds.length === 0) return [];
+    return withSession(async (session) => {
+      const result = await session.executeRead((tx) =>
+        tx.run(
+          `MATCH (a:God)-[r]->(b:God)
+           WHERE a.id IN $godIds AND b.id IN $godIds
+           RETURN a.id AS fromId, type(r) AS relType, b.id AS toId`,
+          { godIds: args.godIds },
+        ),
+      );
+      return result.records.map((r) => ({
+        fromId: r.get("fromId") as string,
+        relType: r.get("relType") as string,
+        toId: r.get("toId") as string,
+      }));
+    });
+  },
+});
+
 export const seedParamsForCultureTrait = action({
   args: { cultureId: v.id("cultures"), field: v.string() },
   returns: v.array(v.string()),
