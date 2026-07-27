@@ -31,8 +31,20 @@ function capitalize(word: string): string {
   return word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word;
 }
 
+/** Chance a name gets a second segment, per texture. "flowing" allows CV/CVV
+ * shapes with no coda, so a single segment can be as short as 2 characters
+ * (e.g. "Mi", "No") — biased toward 2 segments so flowing-texture pantheons
+ * don't read as thin. Other textures already guarantee a longer minimum
+ * segment via CVC-family shapes, so they keep the original 50/50 split. */
+const TWO_SEGMENT_CHANCE: Record<NamingConvention["texture"], number> = {
+  harsh: 0.5,
+  flowing: 0.75,
+  clipped: 0.5,
+  ornate: 0.5,
+};
+
 export function generateName(nc: NamingConvention, rng: Rng): string {
-  const segments = rng.int(1, 2);
+  const segments = rng.chance(TWO_SEGMENT_CHANCE[nc.texture]) ? 2 : 1;
   let word = "";
   for (let i = 0; i < segments; i++) word += buildSegment(nc, rng);
   return capitalize(word);
