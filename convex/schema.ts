@@ -52,6 +52,18 @@ export default defineSchema({
     data: v.any(), // Location
   }).index("by_culture", ["cultureId"]),
 
+  // Named mortals from the myth generator's hookContext (the taboo-breaker,
+  // the mismatch witness, the tension-seeker), promoted from throwaway
+  // prose strings to a reusable roster (2026-07-27 DM-worldbuilding gap
+  // report, high-value add #5).
+  npcs: defineTable({
+    cultureId: v.id("cultures"),
+    mythId: v.id("myths"),
+    name: v.string(),
+    role: v.string(),
+    hook: v.string(),
+  }).index("by_culture", ["cultureId"]),
+
   mythVariants: defineTable({
     // A variant's parent is either the original founding myth (generation 1)
     // or an earlier variant (generation 2+, drift chains beyond one hop) —

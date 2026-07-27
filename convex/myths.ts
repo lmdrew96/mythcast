@@ -1,9 +1,24 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { generateMyths } from "../src/lib/myth/generate";
+import { generateAdventureHook } from "../src/lib/myth/hooks";
 import { requireCultureOwner } from "./cultures";
 import type { CultureProfile, God, Myth } from "../src/lib/types";
 import type { Id } from "./_generated/dataModel";
+
+/** The mortal name + role a myth's hookContext carries, for founding-myth kinds that name a mortal (cautionary/mismatch/tension) — origin/relationship myths name only gods. */
+function npcFromMyth(myth: Myth): { name: string; role: string } | null {
+  switch (myth.hookContext.kind) {
+    case "cautionary":
+      return { name: myth.hookContext.offender, role: "Taboo-breaker" };
+    case "mismatch":
+      return { name: myth.hookContext.witness, role: "Keeper of a secret" };
+    case "tension":
+      return { name: myth.hookContext.seeker, role: "Tension-seeker" };
+    default:
+      return null;
+  }
+}
 
 /** Myth event `involvedGodIds` are produced in-memory before persistence, so they hold the generator's internal hash-based god ids, not Convex ids — remap them once the gods are real documents. */
 function remapGodIds(myth: Myth, idMap: Record<string, Id<"gods">>): Myth {
@@ -48,6 +63,17 @@ export const createMyths = mutation({
         data: remapped,
       });
       mythIds.push(mythId);
+
+      const npc = npcFromMyth(remapped);
+      if (npc) {
+        await ctx.db.insert("npcs", {
+          cultureId: args.cultureId,
+          mythId,
+          name: npc.name,
+          role: npc.role,
+          hook: generateAdventureHook(remapped),
+        });
+      }
     }
     return mythIds;
   },

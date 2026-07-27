@@ -14,6 +14,7 @@ import { SeedForm } from "@/components/SeedForm";
 import { EventQueue } from "@/components/EventQueue";
 import { MythCard } from "@/components/MythCard";
 import { LocationList } from "@/components/LocationList";
+import { NpcRoster } from "@/components/NpcRoster";
 import { Button } from "@/components/ui/Button";
 import { mythToProse } from "@/lib/codex/prose";
 import type { CultureProfile, CultureSeedParams, Myth } from "@/lib/types";
@@ -65,6 +66,7 @@ export default function WorldPage() {
   const cultureDoc = useQuery(api.cultures.get, cultureId ? { cultureId } : "skip");
   const mythDocs = useQuery(api.myths.listByCulture, cultureId ? { cultureId } : "skip");
   const locationDocs = useQuery(api.locations.listByCulture, cultureId ? { cultureId } : "skip");
+  const npcDocs = useQuery(api.npcs.listByCulture, cultureId ? { cultureId } : "skip");
   const worldCultures = useQuery(api.worlds.listCultures, cultureDoc?.worldId ? { worldId: cultureDoc.worldId } : "skip");
 
   /** Creates a culture (and its pantheon/myths/run), optionally inside an existing world — the shared core of both "Generate world" (no worldId) and "Add another culture to this world" (worldId from the currently loaded culture). */
@@ -324,6 +326,15 @@ export default function WorldPage() {
                     Named Locations
                   </h2>
                   <LocationList locations={locationDocs.map((doc) => doc.data as Location)} />
+                </section>
+              )}
+
+              {npcDocs && npcDocs.length > 0 && (
+                <section className="flex flex-col gap-3">
+                  <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
+                    NPC Roster
+                  </h2>
+                  <NpcRoster npcs={npcDocs} />
                 </section>
               )}
 
