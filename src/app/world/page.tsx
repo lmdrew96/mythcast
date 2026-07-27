@@ -47,6 +47,7 @@ export default function WorldPage() {
   const [mythIds, setMythIds] = useState<Id<"myths">[]>([]);
   const [selectedMythId, setSelectedMythId] = useState<Id<"myths"> | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [progressStep, setProgressStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lineage, setLineage] = useState<LineageEntry[]>([]);
   const [relationshipGraph, setRelationshipGraph] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
@@ -60,11 +61,16 @@ export default function WorldPage() {
       // A fresh random seed per run — a hardcoded seed would make every
       // "Generate world" click reproduce the exact same culture/myths.
       const runSeed = Math.floor(Math.random() * 2 ** 31);
+      setProgressStep("Building culture…");
       const newCultureId = await createCulture({ seed: seedParams, rngSeed: runSeed });
+      setProgressStep("Generating pantheon…");
       await createPantheon({ cultureId: newCultureId, rngSeed: runSeed });
+      setProgressStep("Writing founding myths…");
       const newMythIds = await createMyths({ cultureId: newCultureId, rngSeed: runSeed });
+      setProgressStep("Syncing relationship graph…");
       await syncGodRelationships({ cultureId: newCultureId, rngSeed: runSeed });
       await syncDerivationTrace({ cultureId: newCultureId });
+      setProgressStep("Preparing simulation…");
       const newRunId = await startRun({ cultureId: newCultureId, totalGenerations: SIMULATION_GENERATIONS, seed: runSeed });
 
       setCultureId(newCultureId);
@@ -75,6 +81,7 @@ export default function WorldPage() {
       setError(err instanceof Error ? err.message : "Failed to generate world");
     } finally {
       setGenerating(false);
+      setProgressStep(null);
     }
   }
 
@@ -83,18 +90,22 @@ export default function WorldPage() {
     setGenerating(true);
     setError(null);
     try {
+      setProgressStep(`Simulating ${SIMULATION_GENERATIONS} generations of drift…`);
       await runToCompletion({ runId });
       setSimulationDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run simulation");
     } finally {
       setGenerating(false);
+      setProgressStep(null);
     }
   }
 
   useEffect(() => {
     if (!cultureId) return;
-    getRelationshipGraph({ cultureId }).then(setRelationshipGraph);
+    getRelationshipGraph({ cultureId })
+      .then(setRelationshipGraph)
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load relationship graph"));
   }, [cultureId, getRelationshipGraph]);
 
   useEffect(() => {
@@ -103,9 +114,13 @@ export default function WorldPage() {
     // lineage, since nothing else re-triggers this effect once the run completes.
     if (!selectedMythId || !simulationDone) return;
     let cancelled = false;
-    getLineageView({ foundingMythId: selectedMythId }).then((entries) => {
-      if (!cancelled) setLineage(entries as LineageEntry[]);
-    });
+    getLineageView({ foundingMythId: selectedMythId })
+      .then((entries) => {
+        if (!cancelled) setLineage(entries as LineageEntry[]);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load myth lineage");
+      });
     return () => {
       cancelled = true;
     };
@@ -127,7 +142,7 @@ export default function WorldPage() {
           </p>
           <SeedForm value={seedParams} onChange={setSeedParams} disabled={generating} />
           <Button onClick={createWorld} disabled={generating}>
-            {generating ? "Generating world…" : "Generate world"}
+            {generating ? (progressStep ?? "Generating world…") : "Generate world"}
           </Button>
         </div>
       )}
@@ -150,7 +165,7 @@ export default function WorldPage() {
                 <section className="flex flex-col gap-3">
                   <EventQueue runId={runId} totalGenerations={SIMULATION_GENERATIONS} />
                   <Button onClick={runSimulation} disabled={generating}>
-                    {generating ? "Simulating…" : `Run ${SIMULATION_GENERATIONS}-generation simulation`}
+                    {generating ? (progressStep ?? "Simulating…") : `Run ${SIMULATION_GENERATIONS}-generation simulation`}
                   </Button>
                 </section>
               )}
