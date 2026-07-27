@@ -10,13 +10,17 @@
 
 import type * as codex from "../codex.js";
 import type * as cultures from "../cultures.js";
+import type * as factions from "../factions.js";
 import type * as gods from "../gods.js";
 import type * as graph_neo4jClient from "../graph/neo4jClient.js";
 import type * as graph_queries from "../graph/queries.js";
 import type * as graph_sync from "../graph/sync.js";
 import type * as lineage from "../lineage.js";
+import type * as locations from "../locations.js";
 import type * as mythVariants from "../mythVariants.js";
 import type * as myths from "../myths.js";
+import type * as npcs from "../npcs.js";
+import type * as regenerate from "../regenerate.js";
 import type * as simulation from "../simulation.js";
 import type * as validators from "../validators.js";
 import type * as worlds from "../worlds.js";
@@ -30,13 +34,17 @@ import type {
 declare const fullApi: ApiFromModules<{
   codex: typeof codex;
   cultures: typeof cultures;
+  factions: typeof factions;
   gods: typeof gods;
   "graph/neo4jClient": typeof graph_neo4jClient;
   "graph/queries": typeof graph_queries;
   "graph/sync": typeof graph_sync;
   lineage: typeof lineage;
+  locations: typeof locations;
   mythVariants: typeof mythVariants;
   myths: typeof myths;
+  npcs: typeof npcs;
+  regenerate: typeof regenerate;
   simulation: typeof simulation;
   validators: typeof validators;
   worlds: typeof worlds;
