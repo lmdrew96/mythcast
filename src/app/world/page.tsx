@@ -39,6 +39,8 @@ export default function WorldPage() {
   const runToCompletion = useAction(api.simulation.runToCompletion);
   const getLineageView = useAction(api.lineage.getLineageView);
   const getRelationshipGraph = useAction(api.lineage.getRelationshipGraph);
+  const loadForResume = useAction(api.cultures.loadForResume);
+  const myCultures = useQuery(api.cultures.listByOwner);
 
   const [seedParams, setSeedParams] = useState<CultureSeedParams>(DEFAULT_SEED_PARAMS);
   const [cultureId, setCultureId] = useState<Id<"cultures"> | null>(null);
@@ -85,6 +87,23 @@ export default function WorldPage() {
     }
   }
 
+  async function loadCulture(pastCultureId: Id<"cultures">) {
+    setGenerating(true);
+    setError(null);
+    try {
+      const resumed = await loadForResume({ cultureId: pastCultureId });
+      setCultureId(pastCultureId);
+      setMythIds(resumed.mythIds);
+      setSelectedMythId(resumed.mythIds[0] ?? null);
+      setRunId(resumed.runId);
+      setSimulationDone(resumed.simulationDone);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load world");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   async function runSimulation() {
     if (!runId) return;
     setGenerating(true);
@@ -126,7 +145,7 @@ export default function WorldPage() {
     };
   }, [selectedMythId, simulationDone, getLineageView]);
 
-  const suggested = suggestTheme(seedParams);
+  const suggested = suggestTheme((cultureDoc?.data as CultureProfile | undefined)?.seed ?? seedParams);
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
@@ -134,6 +153,26 @@ export default function WorldPage() {
         <h1 className="font-display text-2xl">Mythcast — World Output</h1>
         <p className="mt-1 font-mono text-xs tracking-wide uppercase opacity-60">Codex export · myth lineage · pantheon relationships</p>
       </div>
+
+      {!cultureId && myCultures && myCultures.length > 0 && (
+        <div className="mc-card flex flex-col gap-2 p-6">
+          <h2 className="font-mono text-xs tracking-wide uppercase opacity-60">Your worlds</h2>
+          <ul className="flex flex-col gap-1">
+            {myCultures.map((culture) => (
+              <li key={culture._id}>
+                <button
+                  type="button"
+                  onClick={() => loadCulture(culture._id)}
+                  disabled={generating}
+                  className="text-sm underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground disabled:opacity-50"
+                >
+                  {culture.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {!cultureId && (
         <div className="mc-card flex flex-col items-start gap-4 p-6">

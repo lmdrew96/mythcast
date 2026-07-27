@@ -1,7 +1,9 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { action, mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 import { cultureSeedParamsValidator } from "./validators";
 import { generateCulture } from "../src/lib/culture/generate";
+import type { Doc, Id } from "./_generated/dataModel";
 
 function capitalize(word: string): string {
   return word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word;
@@ -31,5 +33,41 @@ export const get = query({
   args: { cultureId: v.id("cultures") },
   handler: async (ctx, args) => {
     return await ctx.db.get("cultures", args.cultureId);
+  },
+});
+
+/** A signed-in user's past cultures, newest first — lets the world/page.tsx UI offer a "your worlds" history instead of losing everything on refresh. Returns an empty list when signed out. */
+export const listByOwner = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    return await ctx.db
+      .query("cultures")
+      .withIndex("by_owner", (q) => q.eq("owner", identity.tokenIdentifier))
+      .order("desc")
+      .collect();
+  },
+});
+
+/** Reloads everything world/page.tsx needs to resume a past culture from history — its founding myths and (if one exists) its simulation run's completion state. An action (not a query) since it's called imperatively from a click handler, not subscribed to reactively. */
+export const loadForResume = action({
+  args: { cultureId: v.id("cultures") },
+  returns: v.object({
+    mythIds: v.array(v.id("myths")),
+    runId: v.union(v.id("simulationRuns"), v.null()),
+    simulationDone: v.boolean(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ mythIds: Id<"myths">[]; runId: Id<"simulationRuns"> | null; simulationDone: boolean }> => {
+    const myths: Doc<"myths">[] = await ctx.runQuery(api.myths.listByCulture, { cultureId: args.cultureId });
+    const run: Doc<"simulationRuns"> | null = await ctx.runQuery(api.simulation.getRunByCulture, { cultureId: args.cultureId });
+    return {
+      mythIds: myths.map((m) => m._id) as Id<"myths">[],
+      runId: run?._id ?? null,
+      simulationDone: run?.status === "complete",
+    };
   },
 });

@@ -211,6 +211,18 @@ export const getRun = query({
   },
 });
 
+/** The run for a given culture — a culture only ever gets one run via the current UI flow. Used to resume a past culture from history (spec: same seed/generation-count/events reproduces the same run, so the resumed state is exactly what was left). */
+export const getRunByCulture = query({
+  args: { cultureId: v.id("cultures") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("simulationRuns")
+      .withIndex("by_culture", (q) => q.eq("cultureId", args.cultureId))
+      .order("desc")
+      .first();
+  },
+});
+
 export const listEvents = query({
   args: { runId: v.id("simulationRuns") },
   handler: async (ctx, args) => {
