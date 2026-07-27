@@ -11,6 +11,7 @@ import { CodexExport } from "@/components/CodexExport";
 import { RelationshipGraph } from "@/components/RelationshipGraph";
 import { LineageViewer, type LineageEntry } from "@/components/LineageViewer";
 import { SeedForm } from "@/components/SeedForm";
+import { EventQueue } from "@/components/EventQueue";
 import { Button } from "@/components/ui/Button";
 import type { CultureProfile, CultureSeedParams } from "@/lib/types";
 import type { GraphEdge, GraphNode } from "@/lib/graph/layout";
@@ -41,6 +42,8 @@ export default function WorldPage() {
 
   const [seedParams, setSeedParams] = useState<CultureSeedParams>(DEFAULT_SEED_PARAMS);
   const [cultureId, setCultureId] = useState<Id<"cultures"> | null>(null);
+  const [runId, setRunId] = useState<Id<"simulationRuns"> | null>(null);
+  const [simulationDone, setSimulationDone] = useState(false);
   const [mythIds, setMythIds] = useState<Id<"myths">[]>([]);
   const [selectedMythId, setSelectedMythId] = useState<Id<"myths"> | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -50,26 +53,40 @@ export default function WorldPage() {
 
   const cultureDoc = useQuery(api.cultures.get, cultureId ? { cultureId } : "skip");
 
-  async function generateWorld() {
+  async function createWorld() {
     setGenerating(true);
     setError(null);
     try {
       // A fresh random seed per run — a hardcoded seed would make every
-      // "Generate demo world" click reproduce the exact same culture/myths.
+      // "Generate world" click reproduce the exact same culture/myths.
       const runSeed = Math.floor(Math.random() * 2 ** 31);
       const newCultureId = await createCulture({ seed: seedParams, rngSeed: runSeed });
       await createPantheon({ cultureId: newCultureId, rngSeed: runSeed });
       const newMythIds = await createMyths({ cultureId: newCultureId, rngSeed: runSeed });
       await syncGodRelationships({ cultureId: newCultureId, rngSeed: runSeed });
       await syncDerivationTrace({ cultureId: newCultureId });
-      const runId = await startRun({ cultureId: newCultureId, totalGenerations: SIMULATION_GENERATIONS, seed: runSeed });
-      await runToCompletion({ runId });
+      const newRunId = await startRun({ cultureId: newCultureId, totalGenerations: SIMULATION_GENERATIONS, seed: runSeed });
 
       setCultureId(newCultureId);
       setMythIds(newMythIds);
       setSelectedMythId(newMythIds[0] ?? null);
+      setRunId(newRunId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate demo world");
+      setError(err instanceof Error ? err.message : "Failed to generate world");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function runSimulation() {
+    if (!runId) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      await runToCompletion({ runId });
+      setSimulationDone(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to run simulation");
     } finally {
       setGenerating(false);
     }
@@ -81,7 +98,10 @@ export default function WorldPage() {
   }, [cultureId, getRelationshipGraph]);
 
   useEffect(() => {
-    if (!selectedMythId) return;
+    // Wait for the simulation to actually produce drift — fetching keyed only
+    // on selectedMythId would freeze on the pre-simulation (founding-only)
+    // lineage, since nothing else re-triggers this effect once the run completes.
+    if (!selectedMythId || !simulationDone) return;
     let cancelled = false;
     getLineageView({ foundingMythId: selectedMythId }).then((entries) => {
       if (!cancelled) setLineage(entries as LineageEntry[]);
@@ -89,7 +109,7 @@ export default function WorldPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedMythId, getLineageView]);
+  }, [selectedMythId, simulationDone, getLineageView]);
 
   const suggested = suggestTheme(seedParams);
 
@@ -106,7 +126,7 @@ export default function WorldPage() {
             Choose seed parameters, simulate {SIMULATION_GENERATIONS} generations of drift, and see it here — codex, lineage, and pantheon.
           </p>
           <SeedForm value={seedParams} onChange={setSeedParams} disabled={generating} />
-          <Button onClick={generateWorld} disabled={generating}>
+          <Button onClick={createWorld} disabled={generating}>
             {generating ? "Generating world…" : "Generate world"}
           </Button>
         </div>
@@ -120,44 +140,59 @@ export default function WorldPage() {
               <div className="flex flex-col gap-2">
                 <CultureMasthead name={cultureDoc.name} culture={cultureDoc.data as CultureProfile} />
                 <p className="font-mono text-[0.6875rem] tracking-wide uppercase opacity-60">
-                  {SIMULATION_GENERATIONS} generations simulated · {mythIds.length} founding myth{mythIds.length === 1 ? "" : "s"}
+                  {simulationDone
+                    ? `${SIMULATION_GENERATIONS} generations simulated · ${mythIds.length} founding myth${mythIds.length === 1 ? "" : "s"}`
+                    : `Culture created · ${mythIds.length} founding myth${mythIds.length === 1 ? "" : "s"} · ready to simulate`}
                 </p>
               </div>
 
-              <section className="flex flex-col gap-3">
-                <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
-                  Codex Export
-                </h2>
-                <CodexExport cultureId={cultureId} themeName={themeName} themeVariant={themeVariant} />
-              </section>
+              {!simulationDone && runId && (
+                <section className="flex flex-col gap-3">
+                  <EventQueue runId={runId} totalGenerations={SIMULATION_GENERATIONS} />
+                  <Button onClick={runSimulation} disabled={generating}>
+                    {generating ? "Simulating…" : `Run ${SIMULATION_GENERATIONS}-generation simulation`}
+                  </Button>
+                </section>
+              )}
 
-              <section className="flex flex-col gap-3">
-                <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
-                  Relationship Graph
-                </h2>
-                <RelationshipGraph nodes={relationshipGraph.nodes} edges={relationshipGraph.edges} />
-              </section>
+              {simulationDone && (
+                <>
+                  <section className="flex flex-col gap-3">
+                    <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
+                      Codex Export
+                    </h2>
+                    <CodexExport cultureId={cultureId} themeName={themeName} themeVariant={themeVariant} />
+                  </section>
 
-              <section className="flex flex-col gap-3">
-                <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
-                  Lineage Viewer
-                </h2>
-                {mythIds.length > 1 && (
-                  <select
-                    value={selectedMythId ?? undefined}
-                    onChange={(e) => setSelectedMythId(e.target.value as Id<"myths">)}
-                    className="w-fit rounded-md border bg-transparent px-2 py-1 font-mono text-xs"
-                    style={{ borderColor: "var(--mc-secondary)" }}
-                  >
-                    {mythIds.map((id, i) => (
-                      <option key={id} value={id}>
-                        Founding myth {i + 1}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <LineageViewer entries={lineage} />
-              </section>
+                  <section className="flex flex-col gap-3">
+                    <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
+                      Relationship Graph
+                    </h2>
+                    <RelationshipGraph nodes={relationshipGraph.nodes} edges={relationshipGraph.edges} />
+                  </section>
+
+                  <section className="flex flex-col gap-3">
+                    <h2 className="font-display text-xl" style={{ color: "var(--mc-primary)" }}>
+                      Lineage Viewer
+                    </h2>
+                    {mythIds.length > 1 && (
+                      <select
+                        value={selectedMythId ?? undefined}
+                        onChange={(e) => setSelectedMythId(e.target.value as Id<"myths">)}
+                        className="w-fit rounded-md border bg-transparent px-2 py-1 font-mono text-xs"
+                        style={{ borderColor: "var(--mc-secondary)" }}
+                      >
+                        {mythIds.map((id, i) => (
+                          <option key={id} value={id}>
+                            Founding myth {i + 1}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <LineageViewer entries={lineage} />
+                  </section>
+                </>
+              )}
             </div>
           )}
         </ThemePicker>
