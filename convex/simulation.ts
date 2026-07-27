@@ -99,6 +99,30 @@ export const injectEvent = mutation({
   },
 });
 
+/** Clears a queued event entirely, rather than requiring it be overwritten with a different type at the same generation. */
+export const clearEvent = mutation({
+  args: {
+    runId: v.id("simulationRuns"),
+    generation: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get("simulationRuns", args.runId);
+    if (!run) throw new Error("Run not found");
+    if (run.status === "complete") throw new Error("Run is already complete");
+    if (args.generation <= run.currentGeneration) throw new Error("Can only clear events at a generation the run hasn't reached yet");
+
+    const existing = await ctx.db
+      .query("simulationEvents")
+      .withIndex("by_run_and_generation", (q) => q.eq("runId", args.runId).eq("generation", args.generation))
+      .unique();
+    if (existing) {
+      await ctx.db.delete("simulationEvents", existing._id);
+    }
+    return null;
+  },
+});
+
 const advanceResultValidator = v.array(v.object({ variantId: v.id("mythVariants"), parentId: v.union(v.id("myths"), v.id("mythVariants")) }));
 
 /**

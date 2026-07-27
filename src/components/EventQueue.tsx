@@ -22,6 +22,7 @@ export function EventQueue({
   worldId?: Id<"worlds">;
 }) {
   const injectEvent = useMutation(api.simulation.injectEvent);
+  const clearEvent = useMutation(api.simulation.clearEvent);
   const events = useQuery(api.simulation.listEvents, { runId });
   const worldCultures = useQuery(api.worlds.listCultures, worldId ? { worldId } : "skip");
   const [generation, setGeneration] = useState(1);
@@ -109,9 +110,19 @@ export function EventQueue({
             .map((e) => {
               const target = e.targetCultureId ? siblingCultures.find((c) => c._id === e.targetCultureId) : undefined;
               return (
-                <li key={e._id} className="mc-badge capitalize">
-                  Gen {e.generation}: {e.type}
-                  {target ? ` with ${target.name}` : ""}
+                <li key={e._id} className="mc-badge gap-1 capitalize">
+                  <span>
+                    Gen {e.generation}: {e.type}
+                    {target ? ` with ${target.name}` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => clearEvent({ runId, generation: e.generation })}
+                    aria-label={`Remove queued event at generation ${e.generation}`}
+                    className="opacity-60 hover:opacity-100"
+                  >
+                    ×
+                  </button>
                 </li>
               );
             })}
