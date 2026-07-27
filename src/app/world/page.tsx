@@ -10,11 +10,12 @@ import { CultureMasthead } from "@/components/CultureMasthead";
 import { CodexExport } from "@/components/CodexExport";
 import { RelationshipGraph } from "@/components/RelationshipGraph";
 import { LineageViewer, type LineageEntry } from "@/components/LineageViewer";
+import { SeedForm } from "@/components/SeedForm";
 import { Button } from "@/components/ui/Button";
 import type { CultureProfile, CultureSeedParams } from "@/lib/types";
 import type { GraphEdge, GraphNode } from "@/lib/graph/layout";
 
-const DEMO_SEED: CultureSeedParams = {
+const DEFAULT_SEED_PARAMS: CultureSeedParams = {
   climate: "volcanic",
   resourceScarcity: "famine-prone",
   threatModel: "rival-clans",
@@ -38,6 +39,7 @@ export default function WorldPage() {
   const getLineageView = useAction(api.lineage.getLineageView);
   const getRelationshipGraph = useAction(api.lineage.getRelationshipGraph);
 
+  const [seedParams, setSeedParams] = useState<CultureSeedParams>(DEFAULT_SEED_PARAMS);
   const [cultureId, setCultureId] = useState<Id<"cultures"> | null>(null);
   const [mythIds, setMythIds] = useState<Id<"myths">[]>([]);
   const [selectedMythId, setSelectedMythId] = useState<Id<"myths"> | null>(null);
@@ -55,7 +57,7 @@ export default function WorldPage() {
       // A fresh random seed per run — a hardcoded seed would make every
       // "Generate demo world" click reproduce the exact same culture/myths.
       const runSeed = Math.floor(Math.random() * 2 ** 31);
-      const newCultureId = await createCulture({ seed: DEMO_SEED, rngSeed: runSeed });
+      const newCultureId = await createCulture({ seed: seedParams, rngSeed: runSeed });
       await createPantheon({ cultureId: newCultureId, rngSeed: runSeed });
       const newMythIds = await createMyths({ cultureId: newCultureId, rngSeed: runSeed });
       await syncGodRelationships({ cultureId: newCultureId, rngSeed: runSeed });
@@ -89,7 +91,7 @@ export default function WorldPage() {
     };
   }, [selectedMythId, getLineageView]);
 
-  const suggested = suggestTheme(DEMO_SEED);
+  const suggested = suggestTheme(seedParams);
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
@@ -99,10 +101,13 @@ export default function WorldPage() {
       </div>
 
       {!cultureId && (
-        <div className="mc-card flex flex-col items-start gap-3 p-6">
-          <p className="text-sm opacity-80">Generate a culture, simulate {SIMULATION_GENERATIONS} generations of drift, and see it here — codex, lineage, and pantheon.</p>
+        <div className="mc-card flex flex-col items-start gap-4 p-6">
+          <p className="text-sm opacity-80">
+            Choose seed parameters, simulate {SIMULATION_GENERATIONS} generations of drift, and see it here — codex, lineage, and pantheon.
+          </p>
+          <SeedForm value={seedParams} onChange={setSeedParams} disabled={generating} />
           <Button onClick={generateWorld} disabled={generating}>
-            {generating ? "Generating world…" : "Generate demo world"}
+            {generating ? "Generating world…" : "Generate world"}
           </Button>
         </div>
       )}
