@@ -9,11 +9,11 @@ import { Button } from "./ui/Button";
 
 export function CodexExport({ cultureId, themeName, themeVariant }: { cultureId: Id<"cultures">; themeName: ThemeName; themeVariant: ThemeVariantKind }) {
   const generate = useAction(api.codex.generate);
-  const [pending, setPending] = useState<"styled" | "printer-friendly" | null>(null);
+  const [pending, setPending] = useState<"styled" | "printer-friendly" | "reference" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [readyLink, setReadyLink] = useState<{ mode: "styled" | "printer-friendly"; url: string } | null>(null);
+  const [readyLink, setReadyLink] = useState<{ mode: "styled" | "printer-friendly" | "reference"; url: string } | null>(null);
 
-  async function download(mode: "styled" | "printer-friendly") {
+  async function download(mode: "styled" | "printer-friendly" | "reference") {
     setPending(mode);
     setError(null);
     setReadyLink(null);
@@ -47,6 +47,9 @@ export function CodexExport({ cultureId, themeName, themeVariant }: { cultureId:
         </Button>
         <Button variant="ghost" onClick={() => download("printer-friendly")} disabled={pending !== null}>
           {pending === "printer-friendly" ? "Generating…" : "Download printer-friendly PDF"}
+        </Button>
+        <Button variant="ghost" onClick={() => download("reference")} disabled={pending !== null}>
+          {pending === "reference" ? "Generating…" : "Download DM quick-reference PDF"}
         </Button>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}

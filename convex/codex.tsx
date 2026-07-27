@@ -15,12 +15,13 @@ import { getThemeColors } from "../src/lib/theming/palettes";
 import { suggestTheme } from "../src/lib/theming/autoSuggest";
 import type { ThemeName, ThemeVariantKind } from "../src/lib/theming/palettes";
 import type { CultureProfile, God, Myth } from "../src/lib/types";
+import type { Faction } from "../src/lib/culture/factions";
 import type { Doc } from "./_generated/dataModel";
 
 export const generate = action({
   args: {
     cultureId: v.id("cultures"),
-    mode: v.union(v.literal("styled"), v.literal("printer-friendly")),
+    mode: v.union(v.literal("styled"), v.literal("printer-friendly"), v.literal("reference")),
     themeName: v.optional(themeNameValidator),
     themeVariant: v.optional(v.union(v.literal("light"), v.literal("dark"))),
   },
@@ -32,6 +33,7 @@ export const generate = action({
 
     const godDocs: Doc<"gods">[] = await ctx.runQuery(api.gods.listByCulture, { cultureId: args.cultureId });
     const mythDocs: Doc<"myths">[] = await ctx.runQuery(api.myths.listByCulture, { cultureId: args.cultureId });
+    const factionDocs: Doc<"factions">[] = await ctx.runQuery(api.factions.listByCulture, { cultureId: args.cultureId });
 
     const themeName: ThemeName = args.themeName ?? suggestTheme(culture.seed);
     const themeVariant: ThemeVariantKind = args.themeVariant ?? "light";
@@ -46,9 +48,14 @@ export const generate = action({
           summary: cultureToProseSummary(culture),
           gods: godDocs.map((doc) => {
             const god = doc.data as God;
-            return { name: god.name, prose: godToProse(god) };
+            return { name: god.name, prose: godToProse(god), domains: god.domains.value, personality: god.personality.value };
           }),
           myths: mythDocs.map((doc) => mythToProse(doc.data as Myth)),
+          factions: factionDocs.map((doc) => {
+            const faction = doc.data as Faction;
+            return { name: faction.name, goal: faction.goal, allegiance: faction.allegiance };
+          }),
+          tensions: culture.flaggedTensions.map((t) => t.description),
         }}
       />,
     );
